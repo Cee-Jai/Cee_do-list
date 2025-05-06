@@ -1,0 +1,15 @@
+# Node.js
+node_modules/
+npm-debug.log
+
+# Environment variables
+.env
+
+# Build outputs
+client/build
+
+# Dependency lock files
+package-lock.json
+
+# Editor and OS files
+.DS_Store
