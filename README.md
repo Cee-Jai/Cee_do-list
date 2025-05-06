@@ -20,3 +20,4 @@ Tech Stack
   🤝 Contributing (Week 13+)
 
 "Beginners can code, design, test, or promote. Check CONTRIBUTING.md for steps."
+
