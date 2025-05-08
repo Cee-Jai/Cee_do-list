@@ -2,9 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  html {
+    @apply transition-colors duration-300;
+  }
+  html.dark {
+    @apply bg-gray-900 text-gray-100;
+  }
+}
+
 @layer utilities {
   .animate-fade-in {
     animation: fadeIn 0.5s ease-in;
+  }
+  .neumorphic {
+    background: #e0e5ec;
+    box-shadow: 5px 5px 10px #babecc, -5px -5px 10px #ffffff;
+    border-radius: 12px;
+  }
+  .dark .neumorphic {
+    background: #2d3748;
+    box-shadow: 5px 5px 10px #1a202c, -5px -5px 10px #4a5568;
   }
 }
 
