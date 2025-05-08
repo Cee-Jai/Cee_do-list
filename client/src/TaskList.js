@@ -1,7 +1,7 @@
-  import React, { useState, useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import { TaskContext } from './TaskContext';
 
-const TaskList = () => {
+const TaskList = ({ menuOpen }) => {
   const { tasks, toggleTask, deleteTask, editTask } = useContext(TaskContext);
   const [editingTask, setEditingTask] = useState(null);
   const [editTitle, setEditTitle] = useState('');
@@ -53,24 +53,24 @@ const TaskList = () => {
   });
 
   return (
-    <div className="flex mt-6">
-      <aside className="w-64 p-4 neumorphic mr-4 hidden md:block">
-        <h3 className="text-lg font-semibold mb-4 dark:text-gray-100">Filters</h3>
+    <div className="flex mt-4 sm:mt-6">
+      <aside className={`w-64 p-4 neumorphic mr-4 ${menuOpen ? 'block' : 'hidden'} md:block`}>
+        <h3 className="text-base sm:text-lg font-semibold mb-4 dark:text-gray-100">Filters</h3>
         <button
           onClick={() => setFilter('All')}
-          className={`w-full text-left px-3 py-2 mb-2 rounded ${filter === 'All' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 dark:text-gray-100'}`}
+          className={`w-full text-left px-3 py-2 mb-2 rounded text-sm sm:text-base ${filter === 'All' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 dark:text-gray-100'}`}
         >
           All
         </button>
         <button
           onClick={() => setFilter('Completed')}
-          className={`w-full text-left px-3 py-2 mb-2 rounded ${filter === 'Completed' ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-700 dark:text-gray-100'}`}
+          className={`w-full text-left px-3 py-2 mb-2 rounded text-sm sm:text-base ${filter === 'Completed' ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-700 dark:text-gray-100'}`}
         >
           Completed
         </button>
         <button
           onClick={() => setFilter('Pending')}
-          className={`w-full text-left px-3 py-2 rounded ${filter === 'Pending' ? 'bg-yellow-500 text-white' : 'bg-gray-200 dark:bg-gray-700 dark:text-gray-100'}`}
+          className={`w-full text-left px-3 py-2 rounded text-sm sm:text-base ${filter === 'Pending' ? 'bg-yellow-500 text-white' : 'bg-gray-200 dark:bg-gray-700 dark:text-gray-100'}`}
         >
           Pending
         </button>
@@ -79,7 +79,7 @@ const TaskList = () => {
         {filteredTasks.map((task) => (
           <li
             key={task.createdAt}
-            className={`flex flex-col p-4 mb-2 neumorphic rounded-lg hover:scale-105 transition-transform duration-200 border-l-4 ${getPriorityColor(task.priority)} animate-fade-in sm:p-5`}
+            className={`flex flex-col p-3 sm:p-4 mb-2 neumorphic rounded-lg hover:scale-105 transition-transform duration-200 border-l-4 ${getPriorityColor(task.priority)} animate-fade-in`}
           >
             {editingTask === task.createdAt ? (
               <div className="flex-1">
@@ -87,29 +87,29 @@ const TaskList = () => {
                   type="text"
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3"
+                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3 text-sm sm:text-base"
                 />
                 <textarea
                   value={editDescription}
                   onChange={(e) => setEditDescription(e.target.value)}
-                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3"
+                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3 text-sm sm:text-base"
                 />
                 <textarea
                   value={editAccomplishment}
                   onChange={(e) => setEditAccomplishment(e.target.value)}
                   placeholder="What did you accomplish?"
-                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3"
+                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3 text-sm sm:text-base"
                 />
                 <textarea
                   value={editLessonsLearned}
                   onChange={(e) => setEditLessonsLearned(e.target.value)}
                   placeholder="What did you learn?"
-                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3"
+                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3 text-sm sm:text-base"
                 />
                 <select
                   value={editPriority}
                   onChange={(e) => setEditPriority(e.target.value)}
-                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3"
+                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3 text-sm sm:text-base"
                 >
                   <option value="High">High Priority</option>
                   <option value="Medium">Medium Priority</option>
@@ -117,13 +117,13 @@ const TaskList = () => {
                 </select>
                 <button
                   onClick={() => handleSave(task.createdAt)}
-                  className="bg-green-500 text-white p-2 rounded-lg mr-2 sm:p-3"
+                  className="bg-green-500 text-white p-2 rounded-lg mr-2 sm:p-3 text-sm sm:text-base"
                 >
                   Save
                 </button>
                 <button
                   onClick={() => setEditingTask(null)}
-                  className="bg-gray-500 text-white p-2 rounded-lg sm:p-3"
+                  className="bg-gray-500 text-white p-2 rounded-lg sm:p-3 text-sm sm:text-base"
                 >
                   Cancel
                 </button>
@@ -135,30 +135,30 @@ const TaskList = () => {
                     type="checkbox"
                     checked={task.completed}
                     onChange={() => toggleTask(task.createdAt)}
-                    className="mr-3 sm:mr-4"
+                    className="mr-2 sm:mr-3"
                   />
                   <div>
                     <span
                       className={
                         task.completed
-                          ? 'line-through text-green-600 font-semibold dark:text-green-400'
-                          : 'font-semibold dark:text-gray-100'
+                          ? 'line-through text-green-600 font-semibold dark:text-green-400 text-sm sm:text-base'
+                          : 'font-semibold dark:text-gray-100 text-sm sm:text-base'
                       }
                     >
                       {task.title}
                     </span>
-                    <p className="text-sm sm:text-base dark:text-gray-300">{task.description}</p>
+                    <p className="text-xs sm:text-sm dark:text-gray-300">{task.description}</p>
                     {task.accomplishment && (
-                      <p className="text-sm sm:text-base dark:text-gray-300">
+                      <p className="text-xs sm:text-sm dark:text-gray-300">
                         <strong>Accomplished:</strong> {task.accomplishment}
                       </p>
                     )}
                     {task.lessonsLearned && (
-                      <p className="text-sm sm:text-base dark:text-gray-300">
+                      <p className="text-xs sm:text-sm dark:text-gray-300">
                         <strong>Learned:</strong> {task.lessonsLearned}
                       </p>
                     )}
-                    <p className="text-xs sm:text-sm dark:text-gray-400">
+                    <p className="text-xs dark:text-gray-400">
                       Created: {new Date(task.createdAt).toLocaleString()}
                     </p>
                   </div>
@@ -166,13 +166,13 @@ const TaskList = () => {
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleEdit(task)}
-                    className="text-blue-500 hover:text-blue-700 sm:text-lg dark:text-blue-400 dark:hover:text-blue-300"
+                    className="text-blue-500 hover:text-blue-700 text-sm sm:text-base dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => deleteTask(task.createdAt)}
-                    className="text-red-500 hover:text-red-700 sm:text-lg dark:text-red-400 dark:hover:text-red-300"
+                    className="text-red-500 hover:text-red-700 text-sm sm:text-base dark:text-red-400 dark:hover:text-red-300"
                   >
                     Delete
                   </button>
