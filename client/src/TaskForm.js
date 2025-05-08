@@ -1,8 +1,6 @@
-import React, { useState, useContext } from 'react';
-import { TaskContext } from './TaskContext';
+import React, { useState } from 'react';
 
-const TaskForm = () => {
-  const { addTask } = useContext(TaskContext);
+function TaskForm({ addTask }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [accomplishment, setAccomplishment] = useState('');
@@ -29,37 +27,37 @@ const TaskForm = () => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-6 neumorphic animate-fade-in sm:p-8 md:max-w-lg">
-      <h2 className="text-xl font-semibold mb-4 sm:text-2xl dark:text-gray-100">Add a New Task</h2>
+    <form onSubmit={handleSubmit} className="max-w-md mx-auto p-6 bg-white shadow-lg rounded-lg animate-fade-in">
+      <h2 className="text-xl font-semibold mb-4 text-gray-800">Add a New Task</h2>
       <input
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Task title"
-        className="w-full p-3 mb-4 border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 sm:p-4 dark:bg-gray-800 dark:text-gray-100"
+        className="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <textarea
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Task description"
-        className="w-full p-3 mb-4 border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 sm:p-4 dark:bg-gray-800 dark:text-gray-100"
+        className="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <textarea
         value={accomplishment}
         onChange={(e) => setAccomplishment(e.target.value)}
         placeholder="What did you accomplish?"
-        className="w-full p-3 mb-4 border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 sm:p-4 dark:bg-gray-800 dark:text-gray-100"
+        className="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <textarea
         value={lessonsLearned}
         onChange={(e) => setLessonsLearned(e.target.value)}
         placeholder="What did you learn?"
-        className="w-full p-3 mb-4 border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 sm:p-4 dark:bg-gray-800 dark:text-gray-100"
+        className="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
       <select
         value={priority}
         onChange={(e) => setPriority(e.target.value)}
-        className="w-full p-3 mb-4 border-none rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 sm:p-4 dark:bg-gray-800 dark:text-gray-100"
+        className="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
         <option value="High">High Priority</option>
         <option value="Medium">Medium Priority</option>
@@ -67,12 +65,12 @@ const TaskForm = () => {
       </select>
       <button
         type="submit"
-        className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition duration-200 sm:p-4 dark:bg-blue-500 dark:hover:bg-blue-600"
+        className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition duration-200"
       >
         Add Task
       </button>
     </form>
   );
-};
+}
 
 export default TaskForm;

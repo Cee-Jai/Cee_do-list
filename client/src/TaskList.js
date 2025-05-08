@@ -1,15 +1,12 @@
-import React, { useState, useContext } from 'react';
-import { TaskContext } from './TaskContext';
+import React, { useState } from 'react';
 
-const TaskList = ({ menuOpen }) => {
-  const { tasks, toggleTask, deleteTask, editTask } = useContext(TaskContext);
+function TaskList({ tasks, toggleTask, deleteTask, editTask }) {
   const [editingTask, setEditingTask] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editAccomplishment, setEditAccomplishment] = useState('');
   const [editLessonsLearned, setEditLessonsLearned] = useState('');
   const [editPriority, setEditPriority] = useState('Medium');
-  const [filter, setFilter] = useState('All');
 
   const handleEdit = (task) => {
     setEditingTask(task.createdAt);
@@ -45,120 +42,92 @@ const TaskList = ({ menuOpen }) => {
     }
   };
 
-  const filteredTasks = tasks.filter((task) => {
-    if (filter === 'All') return true;
-    if (filter === 'Completed') return task.completed;
-    if (filter === 'Pending') return !task.completed;
-    return true;
-  });
-
   return (
-    <div className="flex mt-4 sm:mt-6">
-      <aside className={`w-64 p-4 neumorphic mr-4 ${menuOpen ? 'block' : 'hidden'} md:block`}>
-        <h3 className="text-base sm:text-lg font-semibold mb-4 dark:text-gray-100">Filters</h3>
-        <button
-          onClick={() => setFilter('All')}
-          className={`w-full text-left px-3 py-2 mb-2 rounded text-sm sm:text-base ${filter === 'All' ? 'bg-blue-500 text-white' : 'bg-gray-200 dark:bg-gray-700 dark:text-gray-100'}`}
+    <ul className="max-w-md mx-auto mt-6">
+      {tasks.map((task) => (
+        <li
+          key={task.createdAt}
+          className={`flex flex-col p-4 mb-2 bg-gray-50 rounded-lg shadow-sm hover:shadow-md transition duration-200 border-l-4 ${getPriorityColor(task.priority)} animate-fade-in`}
         >
-          All
-        </button>
-        <button
-          onClick={() => setFilter('Completed')}
-          className={`w-full text-left px-3 py-2 mb-2 rounded text-sm sm:text-base ${filter === 'Completed' ? 'bg-green-500 text-white' : 'bg-gray-200 dark:bg-gray-700 dark:text-gray-100'}`}
-        >
-          Completed
-        </button>
-        <button
-          onClick={() => setFilter('Pending')}
-          className={`w-full text-left px-3 py-2 rounded text-sm sm:text-base ${filter === 'Pending' ? 'bg-yellow-500 text-white' : 'bg-gray-200 dark:bg-gray-700 dark:text-gray-100'}`}
-        >
-          Pending
-        </button>
-      </aside>
-      <ul className="flex-1">
-        {filteredTasks.map((task) => (
-          <li
-            key={task.createdAt}
-            className={`flex flex-col p-3 sm:p-4 mb-2 neumorphic rounded-lg hover:scale-105 transition-transform duration-200 border-l-4 ${getPriorityColor(task.priority)} animate-fade-in`}
-          >
-            {editingTask === task.createdAt ? (
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3 text-sm sm:text-base"
-                />
-                <textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3 text-sm sm:text-base"
-                />
-                <textarea
-                  value={editAccomplishment}
-                  onChange={(e) => setEditAccomplishment(e.target.value)}
-                  placeholder="What did you accomplish?"
-                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3 text-sm sm:text-base"
-                />
-                <textarea
-                  value={editLessonsLearned}
-                  onChange={(e) => setEditLessonsLearned(e.target.value)}
-                  placeholder="What did you learn?"
-                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3 text-sm sm:text-base"
-                />
-                <select
-                  value={editPriority}
-                  onChange={(e) => setEditPriority(e.target.value)}
-                  className="w-full p-2 mb-2 border-none rounded-lg dark:bg-gray-800 dark:text-gray-100 sm:p-3 text-sm sm:text-base"
-                >
-                  <option value="High">High Priority</option>
-                  <option value="Medium">Medium Priority</option>
-                  <option value="Low">Low Priority</option>
-                </select>
-                <button
-                  onClick={() => handleSave(task.createdAt)}
-                  className="bg-green-500 text-white p-2 rounded-lg mr-2 sm:p-3 text-sm sm:text-base"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => setEditingTask(null)}
-                  className="bg-gray-500 text-white p-2 rounded-lg sm:p-3 text-sm sm:text-base"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
+          {editingTask === task.createdAt ? (
+            <div className="flex-1">
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full p-2 mb-2 border border-gray-300 rounded-lg"
+              />
+              <textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                className="w-full p-2 mb-2 border border-gray-300 rounded-lg"
+              />
+              <textarea
+                value={editAccomplishment}
+                onChange={(e) => setEditAccomplishment(e.target.value)}
+                placeholder="What did you accomplish?"
+                className="w-full p-2 mb-2 border border-gray-300 rounded-lg"
+              />
+              <textarea
+                value={editLessonsLearned}
+                onChange={(e) => setEditLessonsLearned(e.target.value)}
+                placeholder="What did you learn?"
+                className="w-full p-2 mb-2 border border-gray-300 rounded-lg"
+              />
+              <select
+                value={editPriority}
+                onChange={(e) => setEditPriority(e.target.value)}
+                className="w-full p-2 mb-2 border border-gray-300 rounded-lg"
+              >
+                <option value="High">High Priority</option>
+                <option value="Medium">Medium Priority</option>
+                <option value="Low">Low Priority</option>
+              </select>
+              <button
+                onClick={() => handleSave(task.createdAt)}
+                className="bg-green-500 text-white p-2 rounded-lg mr-2"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setEditingTask(null)}
+                className="bg-gray-500 text-white p-2 rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <>
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <input
                     type="checkbox"
                     checked={task.completed}
                     onChange={() => toggleTask(task.createdAt)}
-                    className="mr-2 sm:mr-3"
+                    className="mr-3"
                   />
                   <div>
                     <span
                       className={
                         task.completed
-                          ? 'line-through text-green-600 font-semibold dark:text-green-400 text-sm sm:text-base'
-                          : 'font-semibold dark:text-gray-100 text-sm sm:text-base'
+                          ? 'line-through text-green-600 font-semibold'
+                          : 'text-gray-800 font-semibold'
                       }
                     >
                       {task.title}
                     </span>
-                    <p className="text-xs sm:text-sm dark:text-gray-300">{task.description}</p>
+                    <p className="text-gray-600 text-sm">{task.description}</p>
                     {task.accomplishment && (
-                      <p className="text-xs sm:text-sm dark:text-gray-300">
+                      <p className="text-gray-600 text-sm">
                         <strong>Accomplished:</strong> {task.accomplishment}
                       </p>
                     )}
                     {task.lessonsLearned && (
-                      <p className="text-xs sm:text-sm dark:text-gray-300">
+                      <p className="text-gray-600 text-sm">
                         <strong>Learned:</strong> {task.lessonsLearned}
                       </p>
                     )}
-                    <p className="text-xs dark:text-gray-400">
+                    <p className="text-gray-500 text-xs">
                       Created: {new Date(task.createdAt).toLocaleString()}
                     </p>
                   </div>
@@ -166,24 +135,24 @@ const TaskList = ({ menuOpen }) => {
                 <div className="flex space-x-2">
                   <button
                     onClick={() => handleEdit(task)}
-                    className="text-blue-500 hover:text-blue-700 text-sm sm:text-base dark:text-blue-400 dark:hover:text-blue-300"
+                    className="text-blue-500 hover:text-blue-700"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => deleteTask(task.createdAt)}
-                    className="text-red-500 hover:text-red-700 text-sm sm:text-base dark:text-red-400 dark:hover:text-red-300"
+                    className="text-red-500 hover:text-red-700"
                   >
                     Delete
                   </button>
                 </div>
               </div>
-            )}
-          </li>
-        ))}
-      </ul>
-    </div>
+            </>
+          )}
+        </li>
+      ))}
+    </ul>
   );
-};
+}
 
 export default TaskList;
