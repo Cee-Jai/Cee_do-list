@@ -13,11 +13,17 @@ const App = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
+  const [lastStreakUpdate, setLastStreakUpdate] = useState(new Date().toDateString());
+  const [showForm, setShowForm] = useState(false);
 
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem('onboardingSeen');
     if (!hasSeenOnboarding) {
       setShowOnboarding(true);
+    }
+    const storedLastUpdate = localStorage.getItem('lastStreakUpdate');
+    if (storedLastUpdate) {
+      setLastStreakUpdate(storedLastUpdate);
     }
   }, []);
 
@@ -30,11 +36,24 @@ const App = () => {
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 3000);
     }
-  }, [completedTasks, tasks]);
+    const today = new Date().toDateString();
+    if (lastStreakUpdate !== today && completedTasks > 0) {
+      localStorage.setItem('lastStreakUpdate', today);
+      setLastStreakUpdate(today);
+    }
+  }, [completedTasks, tasks, lastStreakUpdate]);
 
   const getStreak = () => {
-    return 3; // Mock streak for now
+    const today = new Date().toDateString();
+    if (lastStreakUpdate !== today && completedTasks > 0) {
+      return parseInt(localStorage.getItem('streak') || '0') + 1;
+    }
+    return parseInt(localStorage.getItem('streak') || '0');
   };
+
+  useEffect(() => {
+    localStorage.setItem('streak', getStreak().toString());
+  }, [lastStreakUpdate, completedTasks]);
 
   const handleNextStep = () => {
     if (onboardingStep < 2) {
@@ -45,8 +64,22 @@ const App = () => {
     }
   };
 
+  const tipsOfTheDay = [
+    "Break tasks into smaller steps to stay motivated and achieve more!",
+    "Take short breaks to boost focus and productivity.",
+    "Prioritize your most important task each day.",
+    "Reflect on your progress to stay inspired.",
+    "Celebrate small wins to keep the momentum going!",
+  ];
+
+  const getTipOfTheDay = () => {
+    const now = new Date();
+    const dayIndex = now.getDate() % tipsOfTheDay.length;
+    return tipsOfTheDay[dayIndex];
+  };
+
   const onboardingMessages = [
-    { title: "Welcome to Cee_do-list! 🎉", message: "Start by adding a task using the form below." },
+    { title: "Welcome to Cee_do-list! 🎉", message: "Start by adding a task using the button below." },
     { title: "Personalize Your Experience", message: "Switch between light and dark themes in the header." },
     { title: "Earn Rewards!", message: "Complete tasks to earn points and celebrate with confetti!" },
   ];
@@ -115,14 +148,18 @@ const App = () => {
             </div>
             <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-300 hidden sm:block">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Tip of the Day 💡</h3>
-              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                Break tasks into smaller steps to stay motivated and achieve more!
-              </p>
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{getTipOfTheDay()}</p>
             </div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1">
-              <TaskForm />
+              <button
+                onClick={() => setShowForm(true)}
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md text-sm mb-4"
+              >
+                Add Today's Accomplishment
+              </button>
+              <TaskForm showForm={showForm} setShowForm={setShowForm} />
             </div>
             <div className="lg:col-span-2">
               <TaskList menuOpen={menuOpen} />

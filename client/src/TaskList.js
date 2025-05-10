@@ -6,7 +6,7 @@ const TaskList = ({ menuOpen }) => {
   const [editingTask, setEditingTask] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
-  const [editAccomplishment, setEditAccomplishment] = useState('');
+  const [editWeeklyAccomplishment, setEditWeeklyAccomplishment] = useState('');
   const [editLessonsLearned, setEditLessonsLearned] = useState('');
   const [editPriority, setEditPriority] = useState('Medium');
   const [filter, setFilter] = useState('All');
@@ -15,7 +15,7 @@ const TaskList = ({ menuOpen }) => {
     setEditingTask(task.createdAt);
     setEditTitle(task.title);
     setEditDescription(task.description);
-    setEditAccomplishment(task.accomplishment || '');
+    setEditWeeklyAccomplishment(task.weeklyAccomplishment || '');
     setEditLessonsLearned(task.lessonsLearned || '');
     setEditPriority(task.priority || 'Medium');
   };
@@ -25,11 +25,50 @@ const TaskList = ({ menuOpen }) => {
     editTask(taskId, {
       title: editTitle,
       description: editDescription,
-      accomplishment: editAccomplishment,
+      weeklyAccomplishment: editWeeklyAccomplishment,
       lessonsLearned: editLessonsLearned,
       priority: editPriority,
     });
     setEditingTask(null);
+  };
+
+  const handleReminder = (task) => {
+    if (!("Notification" in window)) {
+      alert("This browser does not support notifications.");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      alert("Notifications are blocked. Please enable them in your browser settings.");
+      return;
+    }
+    if (Notification.permission !== "granted") {
+      Notification.requestPermission().then(permission => {
+        if (permission === "granted") {
+          triggerReminder(task);
+        }
+      });
+    } else {
+      triggerReminder(task);
+    }
+  };
+
+  const triggerReminder = (task) => {
+    const now = new Date();
+    const due = task.dueDate || new Date(now.getTime() + 15 * 60 * 1000); // Default to 15 minutes from now if no due date
+    const timeDiff = due - now;
+    if (timeDiff > 0) {
+      setTimeout(() => {
+        new Notification(`Reminder: ${task.title}`, {
+          body: `You need to accomplish: ${task.description || 'This task'} by ${due.toLocaleString()}`,
+          icon: '/favicon.ico', // Update with your app's icon path if available
+        });
+      }, timeDiff);
+    } else {
+      new Notification(`Reminder: ${task.title}`, {
+        body: `This task is due now: ${task.description || 'This task'}`,
+        icon: '/favicon.ico',
+      });
+    }
   };
 
   const getPriorityColor = (priority) => {
@@ -96,9 +135,9 @@ const TaskList = ({ menuOpen }) => {
                   rows="2"
                 />
                 <textarea
-                  value={editAccomplishment}
-                  onChange={(e) => setEditAccomplishment(e.target.value)}
-                  placeholder="What did you accomplish?"
+                  value={editWeeklyAccomplishment}
+                  onChange={(e) => setEditWeeklyAccomplishment(e.target.value)}
+                  placeholder="Weekly Accomplishments"
                   className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
                   rows="2"
                 />
@@ -153,9 +192,9 @@ const TaskList = ({ menuOpen }) => {
                       {task.title}
                     </span>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{task.description}</p>
-                    {task.accomplishment && (
+                    {task.weeklyAccomplishment && (
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        <strong>Accomplished:</strong> {task.accomplishment}
+                        <strong>Weekly Accomplishments:</strong> {task.weeklyAccomplishment}
                       </p>
                     )}
                     {task.lessonsLearned && (
@@ -163,12 +202,20 @@ const TaskList = ({ menuOpen }) => {
                         <strong>Learned:</strong> {task.lessonsLearned}
                       </p>
                     )}
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                      Created: {new Date(task.createdAt).toLocaleString()}
-                    </p>
+                    {task.dueDate && (
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                        Due: {task.dueDate.toLocaleString()}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="flex space-x-2">
+                  <button
+                    onClick={() => handleReminder(task)}
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium transition"
+                  >
+                    Remind
+                  </button>
                   <button
                     onClick={() => handleEdit(task)}
                     className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium transition"
