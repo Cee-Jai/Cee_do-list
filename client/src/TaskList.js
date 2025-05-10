@@ -10,6 +10,8 @@ const TaskList = ({ menuOpen }) => {
   const [editLessonsLearned, setEditLessonsLearned] = useState('');
   const [editPriority, setEditPriority] = useState('Medium');
   const [filter, setFilter] = useState('All');
+  const [settingReminder, setSettingReminder] = useState(null);
+  const [newReminder, setNewReminder] = useState('');
 
   const handleEdit = (task) => {
     setEditingTask(task.createdAt);
@@ -68,6 +70,16 @@ const TaskList = ({ menuOpen }) => {
         body: `This task is due now: ${task.description || 'This task'}`,
         icon: '/favicon.ico',
       });
+    }
+  };
+
+  const handleSetReminder = (task) => {
+    if (newReminder) {
+      const updatedDueDate = new Date(newReminder);
+      editTask(task.createdAt, { ...task, dueDate: updatedDueDate });
+      setSettingReminder(null);
+      setNewReminder('');
+      handleReminder({ ...task, dueDate: updatedDueDate });
     }
   };
 
@@ -210,6 +222,28 @@ const TaskList = ({ menuOpen }) => {
                   </div>
                 </div>
                 <div className="flex space-x-2">
+                  <button
+                    onClick={() => setSettingReminder(task.createdAt === settingReminder ? null : task.createdAt)}
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium transition"
+                  >
+                    {settingReminder === task.createdAt ? 'Cancel' : 'Set Reminder'}
+                  </button>
+                  {settingReminder === task.createdAt && (
+                    <div className="flex space-x-2">
+                      <input
+                        type="datetime-local"
+                        value={newReminder}
+                        onChange={(e) => setNewReminder(e.target.value)}
+                        className="p-1 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-xs"
+                      />
+                      <button
+                        onClick={() => handleSetReminder(task)}
+                        className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 text-sm font-medium transition"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  )}
                   <button
                     onClick={() => handleReminder(task)}
                     className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium transition"

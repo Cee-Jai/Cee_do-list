@@ -14,7 +14,7 @@ const App = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [lastStreakUpdate, setLastStreakUpdate] = useState(new Date().toDateString());
-  const [showForm, setShowForm] = useState(false);
+  const [showTaskInput, setShowTaskInput] = useState(false);
 
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem('onboardingSeen');
@@ -154,12 +154,12 @@ const App = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1">
               <button
-                onClick={() => setShowForm(true)}
+                onClick={() => setShowTaskInput(!showTaskInput)}
                 className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md text-sm mb-4"
               >
-                Add Today's Accomplishment
+                {showTaskInput ? 'Close Task Input' : 'Add Today\'s Accomplishment'}
               </button>
-              <TaskForm showForm={showForm} setShowForm={setShowForm} />
+              {showTaskInput && <TaskForm />}
             </div>
             <div className="lg:col-span-2">
               <TaskList menuOpen={menuOpen} />
