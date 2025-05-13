@@ -3,12 +3,15 @@ import TaskForm from './TaskForm';
 import TaskList from './TaskList';
 import { ThemeContext } from './ThemeContext';
 import { TaskContext } from './TaskContext';
+import { GoalsContext } from './GoalsContext';
+import ProgressChart from './ProgressChart';
 import Confetti from 'react-confetti';
 import './App.css';
 
 const App = () => {
   const { theme, toggleTheme } = useContext(ThemeContext);
   const { tasks, points } = useContext(TaskContext);
+  const { goals, setGoal } = useContext(GoalsContext);
   const [showConfetti, setShowConfetti] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -29,7 +32,7 @@ const App = () => {
 
   const completedTasks = tasks ? tasks.filter((task) => task.completed).length : 0;
   const totalTasks = tasks ? tasks.length : 0;
-  const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+  const progress = goals.daily ? (completedTasks / goals.daily) * 100 : 0;
 
   useEffect(() => {
     if (completedTasks > 0 && completedTasks % 5 === 0) {
@@ -81,13 +84,10 @@ const App = () => {
   const onboardingMessages = [
     { title: "Welcome to Cee_do-list! 🎉", message: "Start by adding a task using the button below." },
     { title: "Personalize Your Experience", message: "Switch between light and dark themes in the header." },
-    { title: "Earn Rewards!", message: "Complete tasks to earn points and celebrate with confetti!" },
+    { title: "Track Your Progress!", message: "Set daily goals and watch your progress grow!" },
   ];
 
-  if (!tasks) {
-    return <div className="text-center text-gray-500">Loading tasks...</div>;
-  }
-
+  // Always render, even if tasks are loading
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col font-sans">
       {showConfetti && <Confetti />}
@@ -119,7 +119,7 @@ const App = () => {
           <h1 className="text-3xl font-extrabold text-gray-800 dark:text-gray-100 tracking-tight">Cee_do-list</h1>
         </div>
         <div className="flex items-center space-x-4">
-          <span className="text-lg font-medium text-gray-700 dark:text-gray-200">Points: {points}</span>
+          <span className="text-lg font-medium text-gray-700 dark:text-gray-200">Points: {points || 0}</span>
           <button
             onClick={toggleTheme}
             className="p-2 rounded-full neumorphic dark:bg-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 transition text-sm"
@@ -130,41 +130,51 @@ const App = () => {
       </header>
       <main className="flex-1 p-6 sm:p-8 lg:p-10">
         <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Tasks Completed</h3>
-              <p className="text-3xl font-bold text-gray-900 dark:text-gray-200">{completedTasks}/{totalTasks}</p>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 mt-3">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-4 rounded-full transition-all duration-500"
-                  style={{ width: `${progress}%` }}
-                />
+          {tasks === null ? (
+            <div className="text-center text-gray-500">Loading tasks...</div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Tasks Completed</h3>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-gray-200">{completedTasks}/{totalTasks}</p>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4 mt-3">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-4 rounded-full transition-all duration-500"
+                      style={{ width: `${progress > 100 ? 100 : progress}%` }}
+                    />
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                    Goal: {goals.daily || 'Not set'} tasks | Progress: {Math.min(progress, 100).toFixed(1)}%
+                  </p>
+                </div>
+                <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Streak 🔥</h3>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-gray-200">{getStreak()} days</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">You’re on a roll!</p>
+                </div>
+                <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-300 hidden sm:block">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Tip of the Day 💡</h3>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{getTipOfTheDay()}</p>
+                </div>
               </div>
-            </div>
-            <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Streak 🔥</h3>
-              <p className="text-3xl font-bold text-gray-900 dark:text-gray-200">{getStreak()} days</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">You’re on a roll!</p>
-            </div>
-            <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-300 hidden sm:block">
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Tip of the Day 💡</h3>
-              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{getTipOfTheDay()}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1">
-              <button
-                onClick={() => setShowTaskInput(!showTaskInput)}
-                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md text-sm mb-4"
-              >
-                {showTaskInput ? 'Close Task Input' : 'Add Today\'s Accomplishment'}
-              </button>
-              {showTaskInput && <TaskForm />}
-            </div>
-            <div className="lg:col-span-2">
-              <TaskList menuOpen={menuOpen} />
-            </div>
-          </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-1">
+                  <button
+                    onClick={() => setShowTaskInput(!showTaskInput)}
+                    className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md text-sm mb-4"
+                  >
+                    {showTaskInput ? 'Close Task Input' : 'Add Today\'s Accomplishment'}
+                  </button>
+                  {showTaskInput && <TaskForm />}
+                </div>
+                <div className="lg:col-span-2">
+                  <TaskList menuOpen={menuOpen} />
+                  <ProgressChart />
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </main>
       <footer className="p-5 neumorphic text-center bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm shadow-inner">

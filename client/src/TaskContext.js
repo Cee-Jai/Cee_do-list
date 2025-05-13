@@ -1,59 +1,80 @@
-import React, { createContext, useState } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 
-const TaskContext = createContext();
+export const TaskContext = createContext();
 
-const TaskProvider = ({ children }) => {
-  const [tasks, setTasks] = useState([]);
+export const TaskProvider = ({ children }) => {
+  const [tasks, setTasks] = useState(null);
   const [points, setPoints] = useState(0);
 
-  const addTask = (newTask) => {
-    setTasks([...tasks, newTask]);
-  };
-
-  const toggleTask = (taskId) => {
-    const updatedTasks = tasks.map((task) =>
-      task.createdAt === taskId
-        ? {
-            ...task,
-            completed: !task.completed,
-            completedAt: task.completed ? null : new Date(),
-          }
-        : task
-    );
-    setTasks(updatedTasks);
-    if (updatedTasks.find((task) => task.createdAt === taskId).completed) {
-      setPoints(points + 10);
+  useEffect(() => {
+    const storedTasks = localStorage.getItem('tasks');
+    if (storedTasks) {
+      const parsedTasks = JSON.parse(storedTasks).map(task => ({
+        ...task,
+        createdAt: new Date(task.createdAt),
+        dueDate: task.dueDate ? new Date(task.dueDate) : null,
+      }));
+      setTasks(parsedTasks);
     } else {
-      setPoints(points - 10);
+      setTasks([]);
     }
+    const storedPoints = localStorage.getItem('points');
+    if (storedPoints) {
+      setPoints(parseInt(storedPoints, 10));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tasks !== null) {
+      const serializedTasks = tasks.map(task => ({
+        ...task,
+        createdAt: task.createdAt.toISOString(),
+        dueDate: task.dueDate ? task.dueDate.toISOString() : null,
+      }));
+      localStorage.setItem('tasks', JSON.stringify(serializedTasks));
+      localStorage.setItem('points', points.toString());
+    }
+  }, [tasks, points]);
+
+  const addTask = (task) => {
+    setTasks([...tasks, task]);
   };
 
-  const deleteTask = (taskId) => {
-    setTasks(tasks.filter((task) => task.createdAt !== taskId));
+  const toggleTask = (createdAt) => {
+    const updatedTasks = tasks.map((task) => {
+      if (task.createdAt.getTime() === createdAt.getTime()) {
+        const newCompleted = !task.completed;
+        if (newCompleted && !task.completed) {
+          setPoints(points + 10);
+        } else if (!newCompleted && task.completed) {
+          setPoints(Math.max(0, points - 10));
+        }
+        return { ...task, completed: newCompleted };
+      }
+      return task;
+    });
+    setTasks(updatedTasks);
   };
 
-  const editTask = (taskId, updatedTask) => {
+  const deleteTask = (createdAt) => {
+    const taskToDelete = tasks.find((task) => task.createdAt.getTime() === createdAt.getTime());
+    if (taskToDelete && taskToDelete.completed) {
+      setPoints(Math.max(0, points - 10));
+    }
+    setTasks(tasks.filter((task) => task.createdAt.getTime() !== createdAt.getTime()));
+  };
+
+  const editTask = (createdAt, updatedTask) => {
     setTasks(
       tasks.map((task) =>
-        task.createdAt === taskId
-          ? {
-              ...task,
-              title: updatedTask.title,
-              description: updatedTask.description,
-              accomplishment: updatedTask.accomplishment,
-              lessonsLearned: updatedTask.lessonsLearned,
-              priority: updatedTask.priority,
-            }
-          : task
+        task.createdAt.getTime() === createdAt.getTime() ? { ...task, ...updatedTask } : task
       )
     );
   };
 
   return (
-    <TaskContext.Provider value={{ tasks, addTask, toggleTask, deleteTask, editTask, points }}>
+    <TaskContext.Provider value={{ tasks, points, addTask, toggleTask, deleteTask, editTask }}>
       {children}
     </TaskContext.Provider>
   );
 };
-
-export { TaskContext, TaskProvider };
