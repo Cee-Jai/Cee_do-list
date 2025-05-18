@@ -9,9 +9,8 @@ const TaskList = ({ menuOpen }) => {
   const [editWeeklyAccomplishment, setEditWeeklyAccomplishment] = useState('');
   const [editLessonsLearned, setEditLessonsLearned] = useState('');
   const [editPriority, setEditPriority] = useState('Medium');
+  const [editDueDate, setEditDueDate] = useState('');
   const [filter, setFilter] = useState('All');
-  const [settingReminder, setSettingReminder] = useState(null);
-  const [newReminder, setNewReminder] = useState('');
 
   const handleEdit = (task) => {
     setEditingTask(task.createdAt);
@@ -20,6 +19,7 @@ const TaskList = ({ menuOpen }) => {
     setEditWeeklyAccomplishment(task.weeklyAccomplishment || '');
     setEditLessonsLearned(task.lessonsLearned || '');
     setEditPriority(task.priority || 'Medium');
+    setEditDueDate(task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '');
   };
 
   const handleSave = (taskId) => {
@@ -30,57 +30,9 @@ const TaskList = ({ menuOpen }) => {
       weeklyAccomplishment: editWeeklyAccomplishment,
       lessonsLearned: editLessonsLearned,
       priority: editPriority,
+      dueDate: editDueDate ? new Date(editDueDate) : null,
     });
     setEditingTask(null);
-  };
-
-  const handleReminder = (task) => {
-    if (!("Notification" in window)) {
-      alert("This browser does not support notifications.");
-      return;
-    }
-    if (Notification.permission === "denied") {
-      alert("Notifications are blocked. Please enable them in your browser settings.");
-      return;
-    }
-    if (Notification.permission !== "granted") {
-      Notification.requestPermission().then(permission => {
-        if (permission === "granted") {
-          triggerReminder(task);
-        }
-      });
-    } else {
-      triggerReminder(task);
-    }
-  };
-
-  const triggerReminder = (task) => {
-    const now = new Date();
-    const due = task.dueDate || new Date(now.getTime() + 15 * 60 * 1000); // Default to 15 minutes from now if no due date
-    const timeDiff = due - now;
-    if (timeDiff > 0) {
-      setTimeout(() => {
-        new Notification(`Reminder: ${task.title}`, {
-          body: `You need to accomplish: ${task.description || 'This task'} by ${due.toLocaleString()}`,
-          icon: '/favicon.ico', // Update with your app's icon path if available
-        });
-      }, timeDiff);
-    } else {
-      new Notification(`Reminder: ${task.title}`, {
-        body: `This task is due now: ${task.description || 'This task'}`,
-        icon: '/favicon.ico',
-      });
-    }
-  };
-
-  const handleSetReminder = (task) => {
-    if (newReminder) {
-      const updatedDueDate = new Date(newReminder);
-      editTask(task.createdAt, { ...task, dueDate: updatedDueDate });
-      setSettingReminder(null);
-      setNewReminder('');
-      handleReminder({ ...task, dueDate: updatedDueDate });
-    }
   };
 
   const getPriorityColor = (priority) => {
@@ -160,6 +112,12 @@ const TaskList = ({ menuOpen }) => {
                   className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
                   rows="2"
                 />
+                <input
+                  type="datetime-local"
+                  value={editDueDate}
+                  onChange={(e) => setEditDueDate(e.target.value)}
+                  className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                />
                 <select
                   value={editPriority}
                   onChange={(e) => setEditPriority(e.target.value)}
@@ -215,41 +173,16 @@ const TaskList = ({ menuOpen }) => {
                       </p>
                     )}
                     {task.dueDate && (
-                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                        Due: {task.dueDate.toLocaleString()}
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        <strong>Due:</strong> {new Date(task.dueDate).toLocaleString()}
                       </p>
                     )}
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                      Created: {new Date(task.createdAt).toLocaleString()}
+                    </p>
                   </div>
                 </div>
                 <div className="flex space-x-2">
-                  <button
-                    onClick={() => setSettingReminder(task.createdAt === settingReminder ? null : task.createdAt)}
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium transition"
-                  >
-                    {settingReminder === task.createdAt ? 'Cancel' : 'Set Reminder'}
-                  </button>
-                  {settingReminder === task.createdAt && (
-                    <div className="flex space-x-2">
-                      <input
-                        type="datetime-local"
-                        value={newReminder}
-                        onChange={(e) => setNewReminder(e.target.value)}
-                        className="p-1 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-xs"
-                      />
-                      <button
-                        onClick={() => handleSetReminder(task)}
-                        className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 text-sm font-medium transition"
-                      >
-                        Save
-                      </button>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => handleReminder(task)}
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium transition"
-                  >
-                    Remind
-                  </button>
                   <button
                     onClick={() => handleEdit(task)}
                     className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium transition"
