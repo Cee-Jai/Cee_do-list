@@ -3,77 +3,68 @@ import React, { createContext, useState, useEffect } from 'react';
 export const TaskContext = createContext();
 
 export const TaskProvider = ({ children }) => {
-  const [tasks, setTasks] = useState(null);
+  const [tasks, setTasks] = useState([]);
   const [points, setPoints] = useState(0);
 
   useEffect(() => {
-    const storedTasks = localStorage.getItem('tasks');
-    if (storedTasks) {
-      const parsedTasks = JSON.parse(storedTasks).map(task => ({
+    const savedTasks = localStorage.getItem('tasks');
+    if (savedTasks) {
+      const parsedTasks = JSON.parse(savedTasks).map((task) => ({
         ...task,
-        createdAt: new Date(task.createdAt),
+        createdAt: new Date(task.createdAt), // Ensure createdAt is a Date object
         dueDate: task.dueDate ? new Date(task.dueDate) : null,
       }));
       setTasks(parsedTasks);
-    } else {
-      setTasks([]);
     }
-    const storedPoints = localStorage.getItem('points');
-    if (storedPoints) {
-      setPoints(parseInt(storedPoints, 10));
+    const savedPoints = localStorage.getItem('points');
+    if (savedPoints) {
+      setPoints(parseInt(savedPoints, 10));
     }
   }, []);
 
   useEffect(() => {
-    if (tasks !== null) {
-      const serializedTasks = tasks.map(task => ({
-        ...task,
-        createdAt: task.createdAt.toISOString(),
-        dueDate: task.dueDate ? task.dueDate.toISOString() : null,
-      }));
-      localStorage.setItem('tasks', JSON.stringify(serializedTasks));
-      localStorage.setItem('points', points.toString());
-    }
+    localStorage.setItem('tasks', JSON.stringify(tasks.map((task) => ({
+      ...task,
+      createdAt: task.createdAt.toISOString(), // Store as ISO string to preserve Date
+      dueDate: task.dueDate ? task.dueDate.toISOString() : null,
+    }))));
+    localStorage.setItem('points', points.toString());
   }, [tasks, points]);
 
   const addTask = (task) => {
-    setTasks([...tasks, task]);
+    setTasks([...tasks, { ...task, createdAt: new Date(), dueDate: task.dueDate ? new Date(task.dueDate) : null }]);
+    setPoints(points + 10);
   };
 
-  const toggleTask = (createdAt) => {
-    const updatedTasks = tasks.map((task) => {
-      if (task.createdAt.getTime() === createdAt.getTime()) {
-        const newCompleted = !task.completed;
-        if (newCompleted && !task.completed) {
-          setPoints(points + 10);
-        } else if (!newCompleted && task.completed) {
-          setPoints(Math.max(0, points - 10));
-        }
-        return { ...task, completed: newCompleted };
-      }
-      return task;
-    });
+  const toggleTask = (taskId) => {
+    const updatedTasks = tasks.map((task) =>
+      task.createdAt.getTime() === taskId
+        ? { ...task, completed: !task.completed }
+        : task
+    );
+    setTasks(updatedTasks);
+    const completedCount = updatedTasks.filter((task) => task.completed).length;
+    setPoints(completedCount * 20);
+  };
+
+  const deleteTask = (taskId) => {
+    const updatedTasks = tasks.filter((task) => task.createdAt.getTime() !== taskId);
+    setTasks(updatedTasks);
+    const completedCount = updatedTasks.filter((task) => task.completed).length;
+    setPoints(completedCount * 20);
+  };
+
+  const editTask = (taskId, updatedTask) => {
+    const updatedTasks = tasks.map((task) =>
+      task.createdAt.getTime() === taskId ? { ...task, ...updatedTask, dueDate: updatedTask.dueDate ? new Date(updatedTask.dueDate) : null } : task
+    );
     setTasks(updatedTasks);
   };
 
-  const deleteTask = (createdAt) => {
-    const taskToDelete = tasks.find((task) => task.createdAt.getTime() === createdAt.getTime());
-    if (taskToDelete && taskToDelete.completed) {
-      setPoints(Math.max(0, points - 10));
-    }
-    setTasks(tasks.filter((task) => task.createdAt.getTime() !== createdAt.getTime()));
-  };
-
-  const editTask = (createdAt, updatedTask) => {
-    setTasks(
-      tasks.map((task) =>
-        task.createdAt.getTime() === createdAt.getTime() ? { ...task, ...updatedTask } : task
-      )
-    );
-  };
-
   return (
-    <TaskContext.Provider value={{ tasks, points, addTask, toggleTask, deleteTask, editTask }}>
+    <TaskContext.Provider
+      value={{ tasks, addTask, toggleTask, deleteTask, editTask, points }}
+    >
       {children}
     </TaskContext.Provider>
   );

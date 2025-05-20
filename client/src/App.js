@@ -1,5 +1,4 @@
-import React, { useContext, useState, useEffect } from 'react';
-import TaskForm from './TaskForm';
+   import React, { useContext, useState, useEffect } from 'react';
 import TaskList from './TaskList';
 import { ThemeContext } from './ThemeContext';
 import { TaskContext } from './TaskContext';
@@ -8,17 +7,25 @@ import './App.css';
 
 const App = () => {
   const { theme, toggleTheme } = useContext(ThemeContext);
-  const { tasks, points } = useContext(TaskContext) || { tasks: [], points: 0 }; // Default to empty array and 0 points
+  const { tasks, points, addTask } = useContext(TaskContext) || { tasks: [], points: 0, addTask: () => {} };
   const [showConfetti, setShowConfetti] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [notifications, setNotifications] = useState([]);
-  const [showDashboard, setShowDashboard] = useState(true);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [newTask, setNewTask] = useState({
+    title: '',
+    description: '',
+    dueDate: '',
+    priority: 'Medium',
+    weeklyAccomplishment: '',
+    lessonsLearned: '',
+  });
 
-  console.log('App rendering, tasks:', tasks); // Debug log
+  console.log('App rendering, tasks:', tasks);
 
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem('onboardingSeen');
@@ -29,14 +36,14 @@ const App = () => {
 
   useEffect(() => {
     const today = new Date();
-    const safeTasks = tasks || []; // Ensure tasks is an array
+    const safeTasks = tasks || [];
     const newNotifications = safeTasks
       .filter((task) => {
         const dueDate = task.dueDate ? new Date(task.dueDate) : null;
         return dueDate && dueDate <= today && !task.completed;
       })
       .map((task) => ({
-        id: task.createdAt,
+        id: task.createdAt.getTime(), // Use getTime() for a number ID
         message: `Task "${task.title}" is overdue!`,
         read: false,
       }));
@@ -55,7 +62,7 @@ const App = () => {
   }, [completedTasks, tasks]);
 
   const getStreak = () => {
-    return 3; // Mock streak for now
+    return 3;
   };
 
   const markNotificationAsRead = (id) => {
@@ -70,6 +77,27 @@ const App = () => {
     setNotifications([]);
   };
 
+  const setReminderForNotification = (notificationId) => {
+    const task = tasks.find((t) => t.createdAt.getTime() === notificationId);
+    if (!task) return;
+
+    const reminderDate = prompt('Enter reminder date and time (YYYY-MM-DDTHH:MM)', new Date().toISOString().slice(0, 16));
+    if (reminderDate) {
+      const newReminderTask = {
+        title: `Reminder: ${task.title}`,
+        description: task.description,
+        dueDate: new Date(reminderDate),
+        priority: task.priority,
+        completed: false,
+        createdAt: new Date(),
+        weeklyAccomplishment: task.weeklyAccomplishment,
+        lessonsLearned: task.lessonsLearned,
+      };
+      addTask(newReminderTask);
+      markNotificationAsRead(notificationId);
+    }
+  };
+
   const handleNextStep = () => {
     if (onboardingStep < 2) {
       setOnboardingStep(onboardingStep + 1);
@@ -79,16 +107,46 @@ const App = () => {
     }
   };
 
+  const handleTaskInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewTask((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleAddTask = () => {
+    if (!newTask.title.trim()) return;
+    addTask({
+      ...newTask,
+      dueDate: newTask.dueDate ? new Date(newTask.dueDate) : null,
+      completed: false,
+      createdAt: new Date(),
+    });
+    setNewTask({
+      title: '',
+      description: '',
+      dueDate: '',
+      priority: 'Medium',
+      weeklyAccomplishment: '',
+      lessonsLearned: '',
+    });
+    setShowTaskForm(false);
+  };
+
   const onboardingMessages = [
-    { title: "Welcome to Cee_do-list! 🎉", message: "Start by adding a task using the form below." },
+    { title: "Welcome to Cee_do-list! 🎉", message: "Start by adding a task using the dropdown in the header." },
     { title: "Personalize Your Experience", message: "Switch between light and dark themes in the header." },
     { title: "Earn Rewards!", message: "Complete tasks to earn points and celebrate with confetti!" },
   ];
 
   if (!tasks) {
-    console.log('Tasks not loaded yet'); // Debug log
+    console.log('Tasks not loaded yet');
     return <div className="text-center text-gray-500">Loading tasks...</div>;
   }
+
+  const filteredTasks = tasks.filter(
+    (task) =>
+      task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      task.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col font-sans">
@@ -112,15 +170,84 @@ const App = () => {
       )}
       <header className="p-5 neumorphic flex justify-between items-center bg-white dark:bg-gray-800 shadow-md">
         <div className="flex items-center space-x-4">
-          <button
-            className="md:hidden p-2 rounded-full neumorphic dark:bg-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            ☰
-          </button>
           <h1 className="text-3xl font-extrabold text-gray-800 dark:text-gray-100 tracking-tight">Cee_do-list</h1>
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="p-2 rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm w-64"
+          />
         </div>
-        <div className="flex items-center space-x-3 sm:space-x-4">
+        <div className="flex items-center space-x-3">
+          <div className="relative">
+            <button
+              onClick={() => setShowTaskForm(!showTaskForm)}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 text-sm"
+            >
+              {showTaskForm ? 'Close Form' : 'Add Task'}
+            </button>
+            {showTaskForm && (
+              <div className="absolute top-12 left-0 w-96 bg-white dark:bg-gray-800 p-4 rounded-xl neumorphic shadow-lg z-50">
+                <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-100">Add New Task</h3>
+                <input
+                  type="text"
+                  name="title"
+                  value={newTask.title}
+                  onChange={handleTaskInputChange}
+                  placeholder="Task title"
+                  className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                />
+                <textarea
+                  name="description"
+                  value={newTask.description}
+                  onChange={handleTaskInputChange}
+                  placeholder="Description"
+                  className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                  rows="2"
+                />
+                <input
+                  type="datetime-local"
+                  name="dueDate"
+                  value={newTask.dueDate}
+                  onChange={handleTaskInputChange}
+                  className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                />
+                <select
+                  name="priority"
+                  value={newTask.priority}
+                  onChange={handleTaskInputChange}
+                  className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                >
+                  <option value="High">High Priority</option>
+                  <option value="Medium">Medium Priority</option>
+                  <option value="Low">Low Priority</option>
+                </select>
+                <textarea
+                  name="weeklyAccomplishment"
+                  value={newTask.weeklyAccomplishment}
+                  onChange={handleTaskInputChange}
+                  placeholder="Weekly Accomplishments"
+                  className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                  rows="2"
+                />
+                <textarea
+                  name="lessonsLearned"
+                  value={newTask.lessonsLearned}
+                  onChange={handleTaskInputChange}
+                  placeholder="What did you learn?"
+                  className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                  rows="2"
+                />
+                <button
+                  onClick={handleAddTask}
+                  className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white p-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 text-sm"
+                >
+                  Add Task
+                </button>
+              </div>
+            )}
+          </div>
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
@@ -134,7 +261,7 @@ const App = () => {
               )}
             </button>
             {showNotifications && (
-              <div className="fixed top-16 right-4 sm:right-8 w-80 sm:w-96 max-h-80 bg-white dark:bg-gray-800 p-4 rounded-xl neumorphic shadow-lg z-50 overflow-y-auto sm:absolute sm:top-12 sm:right-0 sm:w-72 sm:max-h-64">
+              <div className="absolute top-12 right-0 w-96 max-h-80 bg-white dark:bg-gray-800 p-4 rounded-xl neumorphic shadow-lg z-50 overflow-y-auto">
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Notifications</h3>
                   {notifications.length > 0 && (
@@ -157,14 +284,24 @@ const App = () => {
                       <p className={`text-sm ${notif.read ? 'text-gray-600 dark:text-gray-300' : 'text-gray-800 dark:text-gray-100 font-medium'}`}>
                         {notif.message}
                       </p>
-                      {!notif.read && (
-                        <button
-                          onClick={() => markNotificationAsRead(notif.id)}
-                          className="text-xs text-blue-500 dark:text-blue-400 hover:underline"
-                        >
-                          Mark as Read
-                        </button>
-                      )}
+                      <div className="flex space-x-2">
+                        {!notif.read && (
+                          <button
+                            onClick={() => setReminderForNotification(notif.id)}
+                            className="text-xs text-green-500 dark:text-green-400 hover:underline"
+                          >
+                            Set Reminder
+                          </button>
+                        )}
+                        {!notif.read && (
+                          <button
+                            onClick={() => markNotificationAsRead(notif.id)}
+                            className="text-xs text-blue-500 dark:text-blue-400 hover:underline"
+                          >
+                            Mark as Read
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
@@ -177,10 +314,10 @@ const App = () => {
               className="p-2 rounded-full neumorphic dark:bg-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 transition flex items-center space-x-2"
             >
               <span className="text-lg">👤</span>
-              <span className="hidden sm:inline text-sm text-gray-700 dark:text-gray-200">Guest</span>
+              <span className="text-sm text-gray-700 dark:text-gray-200">Guest</span>
             </button>
             {showProfile && (
-              <div className="fixed top-16 right-4 sm:right-8 w-80 sm:w-96 bg-white dark:bg-gray-800 p-4 rounded-xl neumorphic shadow-lg z-50 sm:absolute sm:top-12 sm:right-0 sm:w-64">
+              <div className="absolute top-12 right-0 w-64 bg-white dark:bg-gray-800 p-4 rounded-xl neumorphic shadow-lg z-50">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-12 h-12 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-2xl">
                     👤
@@ -212,18 +349,9 @@ const App = () => {
           </div>
         </div>
       </header>
-      <main className="flex-1 p-6 sm:p-8 lg:p-10">
+      <main className="flex-1 p-6 lg:p-10">
         <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">Dashboard</h2>
-            <button
-              onClick={() => setShowDashboard(!showDashboard)}
-              className="lg:hidden p-2 rounded-full neumorphic dark:bg-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 transition"
-            >
-              {showDashboard ? 'Hide' : 'Show'} Dashboard
-            </button>
-          </div>
-          <div className={`${showDashboard ? 'block' : 'hidden'} lg:block grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8`}>
+          <div className="grid grid-cols-3 gap-6 mb-8">
             <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Tasks Completed</h3>
               <p className="text-3xl font-bold text-gray-900 dark:text-gray-200">{completedTasks}/{totalTasks}</p>
@@ -239,21 +367,14 @@ const App = () => {
               <p className="text-3xl font-bold text-gray-900 dark:text-gray-200">{getStreak()} days</p>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">You’re on a roll!</p>
             </div>
-            <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-300 hidden sm:block">
+            <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
               <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Tip of the Day 💡</h3>
               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                 Break tasks into smaller steps to stay motivated and achieve more!
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1">
-              <TaskForm />
-            </div>
-            <div className="lg:col-span-2">
-              <TaskList menuOpen={menuOpen} />
-            </div>
-          </div>
+          <TaskList tasks={filteredTasks} />
         </div>
       </main>
       <footer className="p-5 neumorphic text-center bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm shadow-inner">

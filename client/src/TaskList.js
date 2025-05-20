@@ -1,8 +1,8 @@
 import React, { useState, useContext } from 'react';
 import { TaskContext } from './TaskContext';
 
-const TaskList = ({ menuOpen }) => {
-  const { tasks, toggleTask, deleteTask, editTask } = useContext(TaskContext);
+const TaskList = ({ tasks }) => {
+  const { toggleTask, deleteTask, editTask } = useContext(TaskContext);
   const [editingTask, setEditingTask] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -13,13 +13,13 @@ const TaskList = ({ menuOpen }) => {
   const [filter, setFilter] = useState('All');
 
   const handleEdit = (task) => {
-    setEditingTask(task.createdAt);
+    setEditingTask(task.createdAt.getTime()); // Use getTime() for comparison
     setEditTitle(task.title);
     setEditDescription(task.description);
     setEditWeeklyAccomplishment(task.weeklyAccomplishment || '');
     setEditLessonsLearned(task.lessonsLearned || '');
     setEditPriority(task.priority || 'Medium');
-    setEditDueDate(task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '');
+    setEditDueDate(task.dueDate ? task.dueDate.toISOString().slice(0, 16) : '');
   };
 
   const handleSave = (taskId) => {
@@ -48,6 +48,18 @@ const TaskList = ({ menuOpen }) => {
     }
   };
 
+  const formatDate = (date) => {
+    try {
+      const parsedDate = new Date(date);
+      if (isNaN(parsedDate.getTime())) {
+        return 'Invalid Date';
+      }
+      return parsedDate.toLocaleString();
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
   const filteredTasks = tasks.filter((task) => {
     if (filter === 'All') return true;
     if (filter === 'Completed') return task.completed;
@@ -57,7 +69,7 @@ const TaskList = ({ menuOpen }) => {
 
   return (
     <div className="flex mt-6">
-      <aside className={`w-64 p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 mr-5 shadow-lg ${menuOpen ? 'block' : 'hidden'} md:block transition-all duration-300`}>
+      <aside className="w-64 p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 mr-5 shadow-lg">
         <h3 className="text-lg font-semibold mb-4 text-gray-800 dark:text-gray-100">Filters</h3>
         <button
           onClick={() => setFilter('All')}
@@ -81,10 +93,10 @@ const TaskList = ({ menuOpen }) => {
       <ul className="flex-1 space-y-4">
         {filteredTasks.map((task) => (
           <li
-            key={task.createdAt}
+            key={task.createdAt.getTime()} // Use getTime() for unique key
             className={`flex flex-col p-4 neumorphic rounded-xl bg-white dark:bg-gray-800 hover:shadow-xl transition-all duration-300 border-l-4 ${getPriorityColor(task.priority)} transform hover:scale-[1.02]`}
           >
-            {editingTask === task.createdAt ? (
+            {editingTask === task.createdAt.getTime() ? (
               <div className="flex-1">
                 <input
                   type="text"
@@ -129,7 +141,7 @@ const TaskList = ({ menuOpen }) => {
                 </select>
                 <div className="flex space-x-3">
                   <button
-                    onClick={() => handleSave(task.createdAt)}
+                    onClick={() => handleSave(task.createdAt.getTime())}
                     className="bg-gradient-to-r from-green-500 to-green-600 text-white p-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 text-sm"
                   >
                     Save
@@ -148,7 +160,7 @@ const TaskList = ({ menuOpen }) => {
                   <input
                     type="checkbox"
                     checked={task.completed}
-                    onChange={() => toggleTask(task.createdAt)}
+                    onChange={() => toggleTask(task.createdAt.getTime())}
                     className="mt-1 w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
                   />
                   <div>
@@ -174,11 +186,11 @@ const TaskList = ({ menuOpen }) => {
                     )}
                     {task.dueDate && (
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        <strong>Due:</strong> {new Date(task.dueDate).toLocaleString()}
+                        <strong>Due:</strong> {formatDate(task.dueDate)}
                       </p>
                     )}
                     <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                      Created: {new Date(task.createdAt).toLocaleString()}
+                      Created: {formatDate(task.createdAt)}
                     </p>
                   </div>
                 </div>
@@ -190,7 +202,7 @@ const TaskList = ({ menuOpen }) => {
                     Edit
                   </button>
                   <button
-                    onClick={() => deleteTask(task.createdAt)}
+                    onClick={() => deleteTask(task.createdAt.getTime())}
                     className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition"
                   >
                     Delete
