@@ -1,6 +1,6 @@
-import { ThemeContext } from './ThemeContext'; // Removed duplicate import
+import { ThemeContext } from './ThemeContext';
 import { TaskContext } from './TaskContext';
-import React, { useContext, useState, useEffect, useRef } from 'react'; // Keep this single React import
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import TaskList from './TaskList';
 import KanbanBoard from './KanbanBoard';
 import { ToastContainer, toast } from 'react-toastify';
@@ -67,10 +67,10 @@ const App = () => {
       };
       recognitionRef.current.onerror = (event) => console.error('Speech recognition error:', event.error);
     }
-  }, [addTask, newTask]); // Added dependencies
+  }, [addTask, newTask]);
 
   useEffect(() => {
-    const today = new Date();
+    const today = new Date(); // eslint-disable-line no-unused-vars
     const safeTasks = tasks || [];
     const overdueNotifications = safeTasks
       .filter((task) => {
@@ -92,7 +92,7 @@ const App = () => {
         });
       }
     });
-  }, [tasks, editTask]); // Added editTask to dependencies
+  }, [tasks, editTask]);
 
   useEffect(() => {
     if (completedTasks > 0 && completedTasks % 5 === 0) {
@@ -112,7 +112,7 @@ const App = () => {
       else if (task.recurrence === 'monthly') nextDueDate.setMonth(nextDueDate.getMonth() + 1);
       editTask(task.createdAt.getTime(), { ...task, dueDate: nextDueDate, completed: false });
     });
-  }, [tasks, editTask]); // Added editTask to dependencies
+  }, [tasks, editTask]);
 
   const getStreak = () => {
     const completedDates = tasks

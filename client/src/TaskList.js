@@ -1,8 +1,9 @@
 import React, { useState, useContext } from 'react';
 import { TaskContext } from './TaskContext';
+import { Tilt } from 'react-tilt'; // Fixed import: use named export
 
-const TaskList = ({ tasks }) => {
-  const { toggleTask, deleteTask, editTask } = useContext(TaskContext);
+const TaskList = ({ tasks, editTask }) => {
+  const { toggleTask, deleteTask } = useContext(TaskContext);
   const [editingTask, setEditingTask] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -10,16 +11,22 @@ const TaskList = ({ tasks }) => {
   const [editLessonsLearned, setEditLessonsLearned] = useState('');
   const [editPriority, setEditPriority] = useState('Medium');
   const [editDueDate, setEditDueDate] = useState('');
+  const [editReminder, setEditReminder] = useState('');
+  const [editRecurrence, setEditRecurrence] = useState('none');
+  const [editStatus, setEditStatus] = useState('To Do');
   const [filter, setFilter] = useState('All');
 
   const handleEdit = (task) => {
-    setEditingTask(task.createdAt.getTime()); // Use getTime() for comparison
+    setEditingTask(task.createdAt.getTime());
     setEditTitle(task.title);
     setEditDescription(task.description);
     setEditWeeklyAccomplishment(task.weeklyAccomplishment || '');
     setEditLessonsLearned(task.lessonsLearned || '');
     setEditPriority(task.priority || 'Medium');
     setEditDueDate(task.dueDate ? task.dueDate.toISOString().slice(0, 16) : '');
+    setEditReminder(task.reminder ? task.reminder.toISOString().slice(0, 16) : '');
+    setEditRecurrence(task.recurrence || 'none');
+    setEditStatus(task.status || 'To Do');
   };
 
   const handleSave = (taskId) => {
@@ -31,29 +38,33 @@ const TaskList = ({ tasks }) => {
       lessonsLearned: editLessonsLearned,
       priority: editPriority,
       dueDate: editDueDate ? new Date(editDueDate) : null,
+      reminder: editReminder ? new Date(editReminder) : null,
+      recurrence: editRecurrence,
+      status: editStatus,
     });
     setEditingTask(null);
   };
 
+  const setReminder = (task) => {
+    const reminderDate = prompt('Enter reminder date and time (YYYY-MM-DDTHH:MM)', task.reminder ? task.reminder.toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16));
+    if (reminderDate) {
+      editTask(task.createdAt.getTime(), { ...task, reminder: new Date(reminderDate), reminderNotified: false });
+    }
+  };
+
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'High':
-        return 'border-red-500';
-      case 'Medium':
-        return 'border-yellow-500';
-      case 'Low':
-        return 'border-green-500';
-      default:
-        return 'border-gray-300';
+      case 'High': return 'border-red-500';
+      case 'Medium': return 'border-yellow-500';
+      case 'Low': return 'border-green-500';
+      default: return 'border-gray-300';
     }
   };
 
   const formatDate = (date) => {
     try {
       const parsedDate = new Date(date);
-      if (isNaN(parsedDate.getTime())) {
-        return 'Invalid Date';
-      }
+      if (isNaN(parsedDate.getTime())) return 'Invalid Date';
       return parsedDate.toLocaleString();
     } catch (error) {
       return 'Invalid Date';
@@ -92,125 +103,168 @@ const TaskList = ({ tasks }) => {
       </aside>
       <ul className="flex-1 space-y-4">
         {filteredTasks.map((task) => (
-          <li
-            key={task.createdAt.getTime()} // Use getTime() for unique key
-            className={`flex flex-col p-4 neumorphic rounded-xl bg-white dark:bg-gray-800 hover:shadow-xl transition-all duration-300 border-l-4 ${getPriorityColor(task.priority)} transform hover:scale-[1.02]`}
-          >
-            {editingTask === task.createdAt.getTime() ? (
-              <div className="flex-1">
-                <input
-                  type="text"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
-                />
-                <textarea
-                  value={editDescription}
-                  onChange={(e) => setEditDescription(e.target.value)}
-                  className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
-                  rows="2"
-                />
-                <textarea
-                  value={editWeeklyAccomplishment}
-                  onChange={(e) => setEditWeeklyAccomplishment(e.target.value)}
-                  placeholder="Weekly Accomplishments"
-                  className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
-                  rows="2"
-                />
-                <textarea
-                  value={editLessonsLearned}
-                  onChange={(e) => setEditLessonsLearned(e.target.value)}
-                  placeholder="What did you learn?"
-                  className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
-                  rows="2"
-                />
-                <input
-                  type="datetime-local"
-                  value={editDueDate}
-                  onChange={(e) => setEditDueDate(e.target.value)}
-                  className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
-                />
-                <select
-                  value={editPriority}
-                  onChange={(e) => setEditPriority(e.target.value)}
-                  className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
-                >
-                  <option value="High">High Priority</option>
-                  <option value="Medium">Medium Priority</option>
-                  <option value="Low">Low Priority</option>
-                </select>
-                <div className="flex space-x-3">
-                  <button
-                    onClick={() => handleSave(task.createdAt.getTime())}
-                    className="bg-gradient-to-r from-green-500 to-green-600 text-white p-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 text-sm"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={() => setEditingTask(null)}
-                    className="bg-gray-500 dark:bg-gray-600 text-white p-3 rounded-lg hover:bg-gray-600 dark:hover:bg-gray-700 transition-all duration-200 text-sm"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start justify-between">
-                <div className="flex items-start space-x-3">
+          <Tilt key={task.createdAt.getTime()} options={{ max: 25, scale: 1.05, speed: 300 }}>
+            <li
+              className={`flex flex-col p-4 neumorphic rounded-xl bg-white dark:bg-gray-800 hover:shadow-xl transition-all duration-300 border-l-4 ${getPriorityColor(task.priority)} transform hover:scale-[1.02]`}
+            >
+              {editingTask === task.createdAt.getTime() ? (
+                <div className="flex-1">
                   <input
-                    type="checkbox"
-                    checked={task.completed}
-                    onChange={() => toggleTask(task.createdAt.getTime())}
-                    className="mt-1 w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
                   />
-                  <div>
-                    <span
-                      className={
-                        task.completed
-                          ? 'line-through text-green-600 font-semibold dark:text-green-400 text-lg'
-                          : 'font-semibold text-gray-800 dark:text-gray-100 text-lg'
-                      }
+                  <textarea
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                    rows="2"
+                  />
+                  <textarea
+                    value={editWeeklyAccomplishment}
+                    onChange={(e) => setEditWeeklyAccomplishment(e.target.value)}
+                    placeholder="Weekly Accomplishments"
+                    className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                    rows="2"
+                  />
+                  <textarea
+                    value={editLessonsLearned}
+                    onChange={(e) => setEditLessonsLearned(e.target.value)}
+                    placeholder="What did you learn?"
+                    className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                    rows="2"
+                  />
+                  <input
+                    type="datetime-local"
+                    value={editDueDate}
+                    onChange={(e) => setEditDueDate(e.target.value)}
+                    className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                  />
+                  <input
+                    type="datetime-local"
+                    value={editReminder}
+                    onChange={(e) => setEditReminder(e.target.value)}
+                    className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                  />
+                  <select
+                    value={editRecurrence}
+                    onChange={(e) => setEditRecurrence(e.target.value)}
+                    className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                  >
+                    <option value="none">No Recurrence</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                  <select
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                    className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                  >
+                    <option value="To Do">To Do</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Done">Done</option>
+                  </select>
+                  <select
+                    name="priority"
+                    value={editPriority}
+                    onChange={(e) => setEditPriority(e.target.value)}
+                    className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                  >
+                    <option value="High">High Priority</option>
+                    <option value="Medium">Medium Priority</option>
+                    <option value="Low">Low Priority</option>
+                  </select>
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => handleSave(task.createdAt.getTime())}
+                      className="bg-gradient-to-r from-green-500 to-green-600 text-white p-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 text-sm"
                     >
-                      {task.title}
-                    </span>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{task.description}</p>
-                    {task.weeklyAccomplishment && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        <strong>Weekly Accomplishments:</strong> {task.weeklyAccomplishment}
-                      </p>
-                    )}
-                    {task.lessonsLearned && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        <strong>Learned:</strong> {task.lessonsLearned}
-                      </p>
-                    )}
-                    {task.dueDate && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        <strong>Due:</strong> {formatDate(task.dueDate)}
-                      </p>
-                    )}
-                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                      Created: {formatDate(task.createdAt)}
-                    </p>
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setEditingTask(null)}
+                      className="bg-gray-500 dark:bg-gray-600 text-white p-3 rounded-lg hover:bg-gray-600 dark:hover:bg-gray-700 transition-all duration-200 text-sm"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => handleEdit(task)}
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium transition"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => deleteTask(task.createdAt.getTime())}
-                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition"
-                  >
-                    Delete
-                  </button>
+              ) : (
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={task.completed}
+                      onChange={() => toggleTask(task.createdAt.getTime())}
+                      className="mt-1 w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                    />
+                    <div>
+                      <span
+                        className={
+                          task.completed
+                            ? 'line-through text-green-600 font-semibold dark:text-green-400 text-lg'
+                            : 'font-semibold text-gray-800 dark:text-gray-100 text-lg'
+                        }
+                      >
+                        {task.title}
+                      </span>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{task.description}</p>
+                      {task.weeklyAccomplishment && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <strong>Weekly Accomplishments:</strong> {task.weeklyAccomplishment}
+                        </p>
+                      )}
+                      {task.lessonsLearned && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <strong>Learned:</strong> {task.lessonsLearned}
+                        </p>
+                      )}
+                      {task.dueDate && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <strong>Due:</strong> {formatDate(task.dueDate)}
+                        </p>
+                      )}
+                      {task.reminder && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <strong>Reminder:</strong> {formatDate(task.reminder)}
+                        </p>
+                      )}
+                      {task.recurrence !== 'none' && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          <strong>Recurs:</strong> {task.recurrence}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                        Created: {formatDate(task.createdAt)} | Status: {task.status}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleEdit(task)}
+                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium transition"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setReminder(task)}
+                      className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 text-sm font-medium transition"
+                    >
+                      Set Reminder
+                    </button>
+                    <button
+                      onClick={() => deleteTask(task.createdAt.getTime())}
+                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </li>
+              )}
+            </li>
+          </Tilt>
         ))}
       </ul>
     </div>
