@@ -7,11 +7,15 @@ export const TaskProvider = ({ children }) => {
   const [habits, setHabits] = useState([]);
   const [points, setPoints] = useState(0);
   const [users] = useState(['Alice', 'Bob', 'Charlie']);
+  const [unlockedThemes, setUnlockedThemes] = useState(['default']);
+  const [unlockedMusic, setUnlockedMusic] = useState(['lofi']);
 
   useEffect(() => {
     const storedTasks = JSON.parse(localStorage.getItem('tasks')) || [];
     const storedHabits = JSON.parse(localStorage.getItem('habits')) || [];
     const storedPoints = JSON.parse(localStorage.getItem('points')) || 0;
+    const storedThemes = JSON.parse(localStorage.getItem('unlockedThemes')) || ['default'];
+    const storedMusic = JSON.parse(localStorage.getItem('unlockedMusic')) || ['lofi'];
     setTasks(storedTasks.map(task => ({
       ...task,
       createdAt: new Date(task.createdAt),
@@ -22,15 +26,20 @@ export const TaskProvider = ({ children }) => {
       ...habit,
       createdAt: new Date(habit.createdAt),
       completionDates: habit.completionDates ? habit.completionDates.map(date => new Date(date)) : [],
+      reminder: habit.reminder ? new Date(habit.reminder) : null,
     })));
     setPoints(storedPoints);
+    setUnlockedThemes(storedThemes);
+    setUnlockedMusic(storedMusic);
   }, []);
 
   useEffect(() => {
     localStorage.setItem('tasks', JSON.stringify(tasks));
     localStorage.setItem('habits', JSON.stringify(habits));
     localStorage.setItem('points', JSON.stringify(points));
-  }, [tasks, habits, points]);
+    localStorage.setItem('unlockedThemes', JSON.stringify(unlockedThemes));
+    localStorage.setItem('unlockedMusic', JSON.stringify(unlockedMusic));
+  }, [tasks, habits, points, unlockedThemes, unlockedMusic]);
 
   const addTask = (task) => {
     setTasks([...tasks, { ...task, completed: false, assignedTo: '', reminderNotified: false }]);
@@ -63,7 +72,7 @@ export const TaskProvider = ({ children }) => {
   };
 
   const addHabit = (habit) => {
-    setHabits([...habits, { ...habit, completionDates: [] }]);
+    setHabits([...habits, { ...habit, completionDates: [], category: 'Productivity', reminder: null }]);
   };
 
   const toggleHabit = (habitId, date) => {
@@ -92,6 +101,24 @@ export const TaskProvider = ({ children }) => {
     setHabits(habits.filter((habit) => habit.createdAt.getTime() !== habitId));
   };
 
+  const editHabit = (habitId, updatedHabit) => {
+    setHabits(habits.map((habit) => (habit.createdAt.getTime() === habitId ? { ...habit, ...updatedHabit } : habit)));
+  };
+
+  const unlockTheme = (theme) => {
+    if (points >= 50 && !unlockedThemes.includes(theme)) {
+      setPoints(points - 50);
+      setUnlockedThemes([...unlockedThemes, theme]);
+    }
+  };
+
+  const unlockMusic = (track) => {
+    if (points >= 30 && !unlockedMusic.includes(track)) {
+      setPoints(points - 30);
+      setUnlockedMusic([...unlockedMusic, track]);
+    }
+  };
+
   return (
     <TaskContext.Provider
       value={{
@@ -99,6 +126,8 @@ export const TaskProvider = ({ children }) => {
         habits,
         points,
         users,
+        unlockedThemes,
+        unlockedMusic,
         addTask,
         toggleTask,
         deleteTask,
@@ -108,6 +137,9 @@ export const TaskProvider = ({ children }) => {
         addHabit,
         toggleHabit,
         deleteHabit,
+        editHabit,
+        unlockTheme,
+        unlockMusic,
       }}
     >
       {children}

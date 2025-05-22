@@ -14,7 +14,7 @@ import './App.css';
 
 const App = () => {
   const { theme, toggleTheme } = useContext(ThemeContext);
-  const { tasks, points, addTask, editTask, addPoints } = useContext(TaskContext) || { tasks: [], points: 0, addTask: () => {}, editTask: () => {}, addPoints: () => {} };
+  const { tasks, points, addTask, editTask, addPoints, habits, unlockedThemes, unlockedMusic, unlockTheme, unlockMusic } = useContext(TaskContext) || { tasks: [], points: 0, addTask: () => {}, editTask: () => {}, addPoints: () => {}, habits: [], unlockedThemes: ['default'], unlockedMusic: ['lofi'], unlockTheme: () => {}, unlockMusic: () => {} };
   const [showConfetti, setShowConfetti] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
@@ -39,9 +39,10 @@ const App = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [voiceActive, setVoiceActive] = useState(false);
   const [musicPlaying, setMusicPlaying] = useState(false);
-  const [pomodoroTime, setPomodoroTime] = useState(25 * 60); // 25 minutes in seconds
+  const [pomodoroTime, setPomodoroTime] = useState(25 * 60);
   const [pomodoroActive, setPomodoroActive] = useState(false);
   const [pomodoroSessions, setPomodoroSessions] = useState(0);
+  const [customBackground, setCustomBackground] = useState(null);
   const audioRef = useRef(null);
   const recognitionRef = useRef(null);
 
@@ -49,13 +50,22 @@ const App = () => {
   const totalTasks = tasks ? tasks.length : 0;
   const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
 
+  const presetThemes = [
+    { name: 'default', url: '' },
+    { name: 'forest', url: 'https://images.unsplash.com/photo-1501854140801-50d01698950b' },
+    { name: 'ocean', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e' },
+  ];
+  const presetMusic = [
+    { name: 'lofi', url: 'https://www.chosic.com/wp-content/uploads/2021/07/Im-Lo-Fi.mp3' },
+    { name: 'chill', url: 'https://www.chosic.com/wp-content/uploads/2021/06/Chill-Day.mp3' },
+  ];
+
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem('onboardingSeen');
     if (!hasSeenOnboarding) {
       setShowOnboarding(true);
     }
 
-    // Initialize Voice Recognition
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       recognitionRef.current = new SpeechRecognition();
@@ -88,7 +98,6 @@ const App = () => {
       }));
     setNotifications(overdueNotifications);
 
-    // Check reminders
     tasks.forEach((task) => {
       if (task.reminder && new Date(task.reminder) <= new Date() && !task.reminderNotified) {
         toast.info(`Reminder: ${task.title}`, {
@@ -114,9 +123,9 @@ const App = () => {
     } else if (pomodoroTime === 0) {
       setPomodoroActive(false);
       setPomodoroSessions((prev) => prev + 1);
-      addPoints(5); // Award 5 points per completed Pomodoro session
+      addPoints(5);
       toast.success('Pomodoro completed! +5 points');
-      setPomodoroTime(25 * 60); // Reset to 25 minutes
+      setPomodoroTime(25 * 60);
     }
     return () => clearInterval(timer);
   }, [pomodoroActive, pomodoroTime, addPoints]);
@@ -223,10 +232,35 @@ const App = () => {
     return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  const handleBackgroundUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setCustomBackground(url);
+    }
+  };
+
+  const selectPresetTheme = (theme) => {
+    if (unlockedThemes.includes(theme.name)) {
+      setCustomBackground(theme.url);
+    } else {
+      toast.error('Theme not unlocked! Spend 50 points to unlock.');
+    }
+  };
+
+  const selectPresetMusic = (track) => {
+    if (unlockedMusic.includes(track.name)) {
+      audioRef.current.src = track.url;
+      audioRef.current.play();
+    } else {
+      toast.error('Music track not unlocked! Spend 30 points to unlock.');
+    }
+  };
+
   const onboardingMessages = [
-    { title: "Welcome to Agitator! 🎉", message: "Start by adding a task using the dropdown or voice!" },
+    { title: "Welcome to Agitator! 🎉", message: "Start by adding a task or habit using the dropdown or voice!" },
     { title: "Personalize Your Experience", message: "Switch themes, use the Pomodoro timer, or track habits!" },
-    { title: "Earn Rewards!", message: "Complete tasks and Pomodoro sessions for points and badges!" },
+    { title: "Earn Rewards!", message: "Complete tasks and Pomodoro sessions for points to unlock themes and music!" },
   ];
 
   if (!tasks) return <div className="text-center text-gray-500">Loading tasks...</div>;
@@ -239,7 +273,7 @@ const App = () => {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col font-sans">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col font-sans" style={{ backgroundImage: customBackground ? `url(${customBackground})` : 'none', backgroundSize: 'cover' }}>
         {showConfetti && <Confetti />}
         {showOnboarding && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in">
@@ -445,8 +479,60 @@ const App = () => {
                       onClick={toggleMusic}
                       className={`w-full p-2 rounded-lg text-sm ${musicPlaying ? 'bg-red-500' : 'bg-green-500'} text-white hover:bg-opacity-90 transition`}
                     >
-                      {musicPlaying ? 'Pause Lo-Fi Music' : 'Play Lo-Fi Music'}
+                      {musicPlaying ? 'Pause Music' : 'Play Music'}
                     </button>
+                    <div className="border-t border-gray-300 dark:border-gray-600 pt-2">
+                      <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Point Store</h4>
+                      <button
+                        onClick={() => unlockTheme('forest')}
+                        className="w-full p-2 mb-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+                        disabled={points < 50 || unlockedThemes.includes('forest')}
+                      >
+                        Unlock Forest Theme (50 pts)
+                      </button>
+                      <button
+                        onClick={() => unlockTheme('ocean')}
+                        className="w-full p-2 mb-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+                        disabled={points < 50 || unlockedThemes.includes('ocean')}
+                      >
+                        Unlock Ocean Theme (50 pts)
+                      </button>
+                      <button
+                        onClick={() => unlockMusic('chill')}
+                        className="w-full p-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
+                        disabled={points < 30 || unlockedMusic.includes('chill')}
+                      >
+                        Unlock Chill Music (30 pts)
+                      </button>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleBackgroundUpload}
+                      className="w-full p-2 mb-2 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                    />
+                    <select
+                      onChange={(e) => selectPresetTheme(presetThemes.find(t => t.name === e.target.value))}
+                      className="w-full p-2 mb-2 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                    >
+                      <option value="">Select Theme</option>
+                      {presetThemes.map((theme) => (
+                        <option key={theme.name} value={theme.name} disabled={!unlockedThemes.includes(theme.name)}>
+                          {theme.name} {unlockedThemes.includes(theme.name) ? '' : '(Locked)'}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      onChange={(e) => selectPresetMusic(presetMusic.find(t => t.name === e.target.value))}
+                      className="w-full p-2 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                    >
+                      <option value="">Select Music</option>
+                      {presetMusic.map((track) => (
+                        <option key={track.name} value={track.name} disabled={!unlockedMusic.includes(track.name)}>
+                          {track.name} {unlockedMusic.includes(track.name) ? '' : '(Locked)'}
+                        </option>
+                      ))}
+                    </select>
                     <button
                       disabled
                       className="w-full p-2 bg-gray-300 dark:bg-gray-500 rounded-lg text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed"
@@ -517,6 +603,27 @@ const App = () => {
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">You’re on a roll!</p>
               </div>
             </div>
+            <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg mb-8">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Analytics Dashboard</h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Task Completion Rate</h3>
+                  <p className="text-2xl text-gray-900 dark:text-gray-100">{progress.toFixed(1)}%</p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Habit Consistency</h3>
+                  <p className="text-2xl text-gray-900 dark:text-gray-100">{habits.filter(h => h.completionDates && h.completionDates.length > 0).length}/{habits.length}</p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Pomodoro Sessions</h3>
+                  <p className="text-2xl text-gray-900 dark:text-gray-100">{pomodoroSessions}</p>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Current Streak</h3>
+                  <p className="text-2xl text-gray-900 dark:text-gray-100">{getStreak()} days</p>
+                </div>
+              </div>
+            </div>
             <TaskList tasks={filteredTasks} editTask={editTask} />
           </div>
         </main>
@@ -524,7 +631,7 @@ const App = () => {
           <div className="mb-2">
             <audio
               ref={audioRef}
-              src="https://www.chosic.com/wp-content/uploads/2021/07/Im-Lo-Fi.mp3"
+              src={presetMusic.find(t => unlockedMusic.includes(t.name))?.url || presetMusic[0].url}
               loop
             />
           </div>
