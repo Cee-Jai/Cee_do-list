@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState, useContext } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import { useContext } from 'react';
 import { TaskContext } from './TaskContext';
-import { Tilt } from 'react-tilt'; // Fixed import: use named export
+import { Tilt } from 'react-tilt';
 
 const KanbanBoard = ({ tasks, editTask }) => {
   const { users, assignTask } = useContext(TaskContext);
+  const [selectedStatus, setSelectedStatus] = useState('To Do'); // Default to "To Do"
 
   const onDragEnd = (result) => {
     if (!result.destination) return;
@@ -14,33 +14,47 @@ const KanbanBoard = ({ tasks, editTask }) => {
     newTasks.splice(result.destination.index, 0, reorderedItem);
     const updatedTasks = newTasks.map((task, index) => ({
       ...task,
-      status: getStatusFromIndex(result.destination.droppableId, index),
+      status: selectedStatus, // Update status based on the current view
     }));
     updatedTasks.forEach((task, i) => editTask(task.createdAt.getTime(), { ...task, status: task.status }));
   };
 
-  const getStatusFromIndex = (droppableId, index) => {
-    const statuses = ['To Do', 'In Progress', 'Done'];
-    return statuses[parseInt(droppableId)];
-  };
-
   const getTasksByStatus = (status) => tasks.filter((task) => task.status === status);
 
+  const statuses = ['To Do', 'In Progress', 'Done'];
+
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex space-x-4 overflow-x-auto p-4">
-        {['0', '1', '2'].map((id) => (
-          <Droppable droppableId={id} key={id}>
-            {(provided) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg w-1/3 min-w-[250px] h-[400px] overflow-y-auto"
-              >
-                <h2 className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-100">
-                  {getStatusFromIndex(id, 0)}
-                </h2>
-                {getTasksByStatus(getStatusFromIndex(id, 0)).map((task, index) => (
+    <div className="p-4">
+      <div className="mb-4">
+        <label htmlFor="status-select" className="text-lg font-semibold text-gray-800 dark:text-gray-100 mr-2">
+          View Tasks:
+        </label>
+        <select
+          id="status-select"
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value)}
+          className="p-2 rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+        >
+          {statuses.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </select>
+      </div>
+      <DragDropContext onDragEnd={onDragEnd}>
+        <Droppable droppableId={selectedStatus}>
+          {(provided) => (
+            <div
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+              className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-lg min-h-[400px] max-h-[400px] overflow-y-auto"
+            >
+              <h2 className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-100">{selectedStatus}</h2>
+              {getTasksByStatus(selectedStatus).length === 0 ? (
+                <p className="text-gray-500 dark:text-gray-400">No tasks in this status.</p>
+              ) : (
+                getTasksByStatus(selectedStatus).map((task, index) => (
                   <Draggable key={task.createdAt.getTime()} draggableId={task.createdAt.getTime().toString()} index={index}>
                     {(provided) => (
                       <Tilt
@@ -49,18 +63,17 @@ const KanbanBoard = ({ tasks, editTask }) => {
                         {...provided.draggableProps}
                         {...provided.dragHandleProps}
                       >
-                        <div
-                          className="bg-gray-100 dark:bg-gray-700 p-3 mb-2 rounded-md shadow hover:shadow-md transition-shadow"
-                        >
+                        <div className="bg-gray-100 dark:bg-gray-700 p-3 mb-2 rounded-md shadow hover:shadow-md transition-shadow">
                           <div className="flex justify-between items-center">
                             <span className={task.completed ? 'line-through text-green-600' : 'text-gray-800 dark:text-gray-100'}>
                               {task.title}
                             </span>
                             <select
-                              value={task.assignedTo}
+                              value={task.assignedTo || ''}
                               onChange={(e) => assignTask(task.createdAt.getTime(), e.target.value)}
-                              className="ml-2 p-1 border rounded"
+                              className="ml-2 p-1 border rounded text-sm"
                             >
+                              <option value="">Unassigned</option>
                               {users.map((user) => (
                                 <option key={user} value={user}>
                                   {user}
@@ -72,14 +85,14 @@ const KanbanBoard = ({ tasks, editTask }) => {
                       </Tilt>
                     )}
                   </Draggable>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
-        ))}
-      </div>
-    </DragDropContext>
+                ))
+              )}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
+    </div>
   );
 };
 

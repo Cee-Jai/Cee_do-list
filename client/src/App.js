@@ -3,6 +3,7 @@ import { TaskContext } from './TaskContext';
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import TaskList from './TaskList';
 import KanbanBoard from './KanbanBoard';
+import HabitTracker from './HabitTracker';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Confetti from 'react-confetti';
@@ -13,7 +14,7 @@ import './App.css';
 
 const App = () => {
   const { theme, toggleTheme } = useContext(ThemeContext);
-  const { tasks, points, addTask, editTask } = useContext(TaskContext) || { tasks: [], points: 0, addTask: () => {}, editTask: () => {} };
+  const { tasks, points, addTask, editTask, addPoints } = useContext(TaskContext) || { tasks: [], points: 0, addTask: () => {}, editTask: () => {}, addPoints: () => {} };
   const [showConfetti, setShowConfetti] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
@@ -37,6 +38,11 @@ const App = () => {
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [voiceActive, setVoiceActive] = useState(false);
+  const [musicPlaying, setMusicPlaying] = useState(false);
+  const [pomodoroTime, setPomodoroTime] = useState(25 * 60); // 25 minutes in seconds
+  const [pomodoroActive, setPomodoroActive] = useState(false);
+  const [pomodoroSessions, setPomodoroSessions] = useState(0);
+  const audioRef = useRef(null);
   const recognitionRef = useRef(null);
 
   const completedTasks = tasks ? tasks.filter((task) => task.completed).length : 0;
@@ -70,12 +76,10 @@ const App = () => {
   }, [addTask, newTask]);
 
   useEffect(() => {
-    const today = new Date(); // eslint-disable-line no-unused-vars
-    const safeTasks = tasks || [];
-    const overdueNotifications = safeTasks
+    const overdueNotifications = tasks
       .filter((task) => {
         const dueDate = task.dueDate ? new Date(task.dueDate) : null;
-        return dueDate && dueDate <= today && !task.completed;
+        return dueDate && dueDate <= new Date() && !task.completed;
       })
       .map((task) => ({
         id: task.createdAt.getTime(),
@@ -85,8 +89,8 @@ const App = () => {
     setNotifications(overdueNotifications);
 
     // Check reminders
-    safeTasks.forEach((task) => {
-      if (task.reminder && new Date(task.reminder) <= today && !task.reminderNotified) {
+    tasks.forEach((task) => {
+      if (task.reminder && new Date(task.reminder) <= new Date() && !task.reminderNotified) {
         toast.info(`Reminder: ${task.title}`, {
           onClose: () => editTask(task.createdAt.getTime(), { ...task, reminderNotified: true }),
         });
@@ -102,9 +106,23 @@ const App = () => {
   }, [completedTasks, tasks]);
 
   useEffect(() => {
-    // Handle task recurrence
-    const now = new Date();
-    const recurringTasks = tasks.filter((task) => task.recurrence !== 'none' && task.completed && new Date(task.dueDate) < now);
+    let timer;
+    if (pomodoroActive && pomodoroTime > 0) {
+      timer = setInterval(() => {
+        setPomodoroTime((prev) => prev - 1);
+      }, 1000);
+    } else if (pomodoroTime === 0) {
+      setPomodoroActive(false);
+      setPomodoroSessions((prev) => prev + 1);
+      addPoints(5); // Award 5 points per completed Pomodoro session
+      toast.success('Pomodoro completed! +5 points');
+      setPomodoroTime(25 * 60); // Reset to 25 minutes
+    }
+    return () => clearInterval(timer);
+  }, [pomodoroActive, pomodoroTime, addPoints]);
+
+  useEffect(() => {
+    const recurringTasks = tasks.filter((task) => task.recurrence !== 'none' && task.completed && new Date(task.dueDate) < new Date());
     recurringTasks.forEach((task) => {
       let nextDueDate = new Date(task.dueDate);
       if (task.recurrence === 'daily') nextDueDate.setDate(nextDueDate.getDate() + 1);
@@ -123,7 +141,6 @@ const App = () => {
         return acc;
       }, {});
     let streak = 0;
-    const today = new Date().toDateString();
     for (let i = 0; i < 7; i++) {
       const date = new Date();
       date.setDate(date.getDate() - i);
@@ -182,10 +199,34 @@ const App = () => {
     setVoiceActive(!voiceActive);
   };
 
+  const toggleMusic = () => {
+    if (musicPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setMusicPlaying(!musicPlaying);
+  };
+
+  const togglePomodoro = () => {
+    setPomodoroActive(!pomodoroActive);
+  };
+
+  const resetPomodoro = () => {
+    setPomodoroActive(false);
+    setPomodoroTime(25 * 60);
+  };
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
   const onboardingMessages = [
-    { title: "Welcome to Cee_do-list! 🎉", message: "Start by adding a task using the dropdown or voice!" },
-    { title: "Personalize Your Experience", message: "Switch themes or view the Kanban board." },
-    { title: "Earn Rewards!", message: "Complete tasks for points and badges!" },
+    { title: "Welcome to Agitator! 🎉", message: "Start by adding a task using the dropdown or voice!" },
+    { title: "Personalize Your Experience", message: "Switch themes, use the Pomodoro timer, or track habits!" },
+    { title: "Earn Rewards!", message: "Complete tasks and Pomodoro sessions for points and badges!" },
   ];
 
   if (!tasks) return <div className="text-center text-gray-500">Loading tasks...</div>;
@@ -219,7 +260,7 @@ const App = () => {
         )}
         <header className="p-5 neumorphic flex justify-between items-center bg-white dark:bg-gray-800 shadow-md">
           <div className="flex items-center space-x-4">
-            <h1 className="text-3xl font-extrabold text-gray-800 dark:text-gray-100 tracking-tight">Cee_do-list</h1>
+            <h1 className="text-3xl font-extrabold text-gray-800 dark:text-gray-100 tracking-tight">Agitator</h1>
             <input
               type="text"
               placeholder="Search tasks..."
@@ -379,12 +420,13 @@ const App = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Guest</h3>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Welcome to Cee_do-list!</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Welcome to Agitator!</p>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm text-gray-700 dark:text-gray-200">Total Points: {points}</p>
                     <p className="text-sm text-gray-700 dark:text-gray-200">Tasks Completed: {completedTasks}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-200">Pomodoro Sessions: {pomodoroSessions}</p>
                     <p className="text-sm text-gray-700 dark:text-gray-200">Streak: {getStreak()} days</p>
                     {getStreak() >= 7 && <p className="text-sm text-green-600">Badge: Streak Master!</p>}
                     <button
@@ -398,6 +440,12 @@ const App = () => {
                       className={`w-full p-2 rounded-lg text-sm ${voiceActive ? 'bg-red-500' : 'bg-green-500'} text-white hover:bg-opacity-90 transition`}
                     >
                       {voiceActive ? 'Stop Voice' : 'Start Voice'}
+                    </button>
+                    <button
+                      onClick={toggleMusic}
+                      className={`w-full p-2 rounded-lg text-sm ${musicPlaying ? 'bg-red-500' : 'bg-green-500'} text-white hover:bg-opacity-90 transition`}
+                    >
+                      {musicPlaying ? 'Pause Lo-Fi Music' : 'Play Lo-Fi Music'}
                     </button>
                     <button
                       disabled
@@ -422,6 +470,9 @@ const App = () => {
             <div className="mb-8">
               <KanbanBoard tasks={filteredTasks} editTask={editTask} />
             </div>
+            <div className="mb-8">
+              <HabitTracker />
+            </div>
             {showCalendar && (
               <div className="mb-8">
                 <StaticDatePicker
@@ -443,22 +494,41 @@ const App = () => {
                 </div>
               </div>
               <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Pomodoro Timer</h3>
+                <p className="text-3xl font-bold text-gray-900 dark:text-gray-200">{formatTime(pomodoroTime)}</p>
+                <div className="mt-3 flex space-x-2">
+                  <button
+                    onClick={togglePomodoro}
+                    className={`px-3 py-1 rounded-lg text-sm ${pomodoroActive ? 'bg-red-500' : 'bg-green-500'} text-white hover:bg-opacity-90 transition`}
+                  >
+                    {pomodoroActive ? 'Pause' : 'Start'}
+                  </button>
+                  <button
+                    onClick={resetPomodoro}
+                    className="px-3 py-1 rounded-lg bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-100 hover:bg-gray-400 dark:hover:bg-gray-500 transition text-sm"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+              <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
                 <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Streak 🔥</h3>
                 <p className="text-3xl font-bold text-gray-900 dark:text-gray-200">{getStreak()} days</p>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">You’re on a roll!</p>
-              </div>
-              <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg hover:shadow-xl transition-shadow duration-300">
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Tip of the Day 💡</h3>
-                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                  Break tasks into smaller steps to stay motivated and achieve more!
-                </p>
               </div>
             </div>
             <TaskList tasks={filteredTasks} editTask={editTask} />
           </div>
         </main>
         <footer className="p-5 neumorphic text-center bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm shadow-inner">
-          Boost Your Agility with Cee_do-list © 2025
+          <div className="mb-2">
+            <audio
+              ref={audioRef}
+              src="https://www.chosic.com/wp-content/uploads/2021/07/Im-Lo-Fi.mp3"
+              loop
+            />
+          </div>
+          Boost Your Agility with Agitator © 2025
         </footer>
         <ToastContainer position="top-right" autoClose={5000} />
       </div>
