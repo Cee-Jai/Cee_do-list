@@ -1,9 +1,10 @@
-import { ThemeContext } from './ThemeContext';
-import { TaskContext } from './TaskContext';
+   import { ThemeContext } from './ThemeContext';
+import { TaskContext, TaskProvider } from './TaskContext';
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import TaskList from './TaskList';
 import KanbanBoard from './KanbanBoard';
 import HabitTracker from './HabitTracker';
+import UserProfile from './UserProfile';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Confetti from 'react-confetti';
@@ -14,7 +15,7 @@ import './App.css';
 
 const App = () => {
   const { theme, toggleTheme } = useContext(ThemeContext);
-  const { tasks, points, addTask, editTask, addPoints, habits, unlockedThemes, unlockedMusic, unlockTheme, unlockMusic } = useContext(TaskContext) || { tasks: [], points: 0, addTask: () => {}, editTask: () => {}, addPoints: () => {}, habits: [], unlockedThemes: ['default'], unlockedMusic: ['lofi'], unlockTheme: () => {}, unlockMusic: () => {} };
+  const { tasks, points, addTask, editTask, addPoints, habits, unlockedThemes, unlockedMusic, unlockTheme, unlockMusic } = useContext(TaskContext);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
@@ -92,7 +93,7 @@ const App = () => {
         return dueDate && dueDate <= new Date() && !task.completed;
       })
       .map((task) => ({
-        id: task.createdAt.getTime(),
+        id: task._id,
         message: `Task "${task.title}" is overdue!`,
         read: false,
       }));
@@ -101,7 +102,7 @@ const App = () => {
     tasks.forEach((task) => {
       if (task.reminder && new Date(task.reminder) <= new Date() && !task.reminderNotified) {
         toast.info(`Reminder: ${task.title}`, {
-          onClose: () => editTask(task.createdAt.getTime(), { ...task, reminderNotified: true }),
+          onClose: () => editTask(task._id, { ...task, reminderNotified: true }),
         });
       }
     });
@@ -137,7 +138,7 @@ const App = () => {
       if (task.recurrence === 'daily') nextDueDate.setDate(nextDueDate.getDate() + 1);
       else if (task.recurrence === 'weekly') nextDueDate.setDate(nextDueDate.getDate() + 7);
       else if (task.recurrence === 'monthly') nextDueDate.setMonth(nextDueDate.getMonth() + 1);
-      editTask(task.createdAt.getTime(), { ...task, dueDate: nextDueDate, completed: false });
+      editTask(task._id, { ...task, dueDate: nextDueDate, completed: false });
     });
   }, [tasks, editTask]);
 
@@ -624,7 +625,8 @@ const App = () => {
                 </div>
               </div>
             </div>
-            <TaskList tasks={filteredTasks} editTask={editTask} />
+            <TaskList />
+            <UserProfile />
           </div>
         </main>
         <footer className="p-5 neumorphic text-center bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm shadow-inner">
@@ -643,4 +645,11 @@ const App = () => {
   );
 };
 
-export default App;
+// Wrap App with TaskProvider at the top level
+const AppWrapper = () => (
+  <TaskProvider>
+    <App />
+  </TaskProvider>
+);
+
+export default AppWrapper;

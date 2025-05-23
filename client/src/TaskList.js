@@ -1,9 +1,11 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { TaskContext } from './TaskContext';
 import { Tilt } from 'react-tilt'; // Fixed import: use named export
+import axios from 'axios';
 
-const TaskList = ({ tasks, editTask }) => {
+const TaskList = ({ editTask }) => {
   const { toggleTask, deleteTask } = useContext(TaskContext);
+  const [tasks, setTasks] = useState([]);
   const [editingTask, setEditingTask] = useState(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -16,22 +18,29 @@ const TaskList = ({ tasks, editTask }) => {
   const [editStatus, setEditStatus] = useState('To Do');
   const [filter, setFilter] = useState('All');
 
+  // Fetch tasks from API on component mount
+  useEffect(() => {
+    axios.get('http://localhost:5000/api/tasks')
+      .then(response => setTasks(response.data))
+      .catch(error => console.error('Error fetching tasks:', error));
+  }, []);
+
   const handleEdit = (task) => {
-    setEditingTask(task.createdAt.getTime());
+    setEditingTask(task._id); // Use _id from MongoDB instead of createdAt
     setEditTitle(task.title);
-    setEditDescription(task.description);
+    setEditDescription(task.description || '');
     setEditWeeklyAccomplishment(task.weeklyAccomplishment || '');
     setEditLessonsLearned(task.lessonsLearned || '');
     setEditPriority(task.priority || 'Medium');
-    setEditDueDate(task.dueDate ? task.dueDate.toISOString().slice(0, 16) : '');
-    setEditReminder(task.reminder ? task.reminder.toISOString().slice(0, 16) : '');
+    setEditDueDate(task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : '');
+    setEditReminder(task.reminder ? new Date(task.reminder).toISOString().slice(0, 16) : '');
     setEditRecurrence(task.recurrence || 'none');
     setEditStatus(task.status || 'To Do');
   };
 
   const handleSave = (taskId) => {
     if (!editTitle.trim()) return;
-    editTask(taskId, {
+    const updatedTask = {
       title: editTitle,
       description: editDescription,
       weeklyAccomplishment: editWeeklyAccomplishment,
@@ -41,14 +50,24 @@ const TaskList = ({ tasks, editTask }) => {
       reminder: editReminder ? new Date(editReminder) : null,
       recurrence: editRecurrence,
       status: editStatus,
-    });
+      completed: tasks.find(t => t._id === taskId)?.completed || false,
+    };
+    axios.put(`http://localhost:5000/api/tasks/${taskId}`, updatedTask)
+      .then(response => {
+        setTasks(tasks.map(task => task._id === taskId ? response.data : task));
+      })
+      .catch(error => console.error('Error updating task:', error));
     setEditingTask(null);
   };
 
   const setReminder = (task) => {
-    const reminderDate = prompt('Enter reminder date and time (YYYY-MM-DDTHH:MM)', task.reminder ? task.reminder.toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16));
+    const reminderDate = prompt('Enter reminder date and time (YYYY-MM-DDTHH:MM)', task.reminder ? new Date(task.reminder).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16));
     if (reminderDate) {
-      editTask(task.createdAt.getTime(), { ...task, reminder: new Date(reminderDate), reminderNotified: false });
+      axios.put(`http://localhost:5000/api/tasks/${task._id}`, { ...task, reminder: new Date(reminderDate), reminderNotified: false })
+        .then(response => {
+          setTasks(tasks.map(t => t._id === task._id ? response.data : t));
+        })
+        .catch(error => console.error('Error setting reminder:', error));
     }
   };
 
@@ -103,11 +122,11 @@ const TaskList = ({ tasks, editTask }) => {
       </aside>
       <ul className="flex-1 space-y-4">
         {filteredTasks.map((task) => (
-          <Tilt key={task.createdAt.getTime()} options={{ max: 25, scale: 1.05, speed: 300 }}>
+          <Tilt key={task._id} options={{ max: 25, scale: 1.05, speed: 300 }}>
             <li
               className={`flex flex-col p-4 neumorphic rounded-xl bg-white dark:bg-gray-800 hover:shadow-xl transition-all duration-300 border-l-4 ${getPriorityColor(task.priority)} transform hover:scale-[1.02]`}
             >
-              {editingTask === task.createdAt.getTime() ? (
+              {editingTask === task._id ? (
                 <div className="flex-1">
                   <input
                     type="text"
@@ -167,7 +186,6 @@ const TaskList = ({ tasks, editTask }) => {
                     <option value="Done">Done</option>
                   </select>
                   <select
-                    name="priority"
                     value={editPriority}
                     onChange={(e) => setEditPriority(e.target.value)}
                     className="w-full p-3 mb-3 border-none rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
@@ -178,7 +196,7 @@ const TaskList = ({ tasks, editTask }) => {
                   </select>
                   <div className="flex space-x-3">
                     <button
-                      onClick={() => handleSave(task.createdAt.getTime())}
+                      onClick={() => handleSave(task._id)}
                       className="bg-gradient-to-r from-green-500 to-green-600 text-white p-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 text-sm"
                     >
                       Save
@@ -196,8 +214,15 @@ const TaskList = ({ tasks, editTask }) => {
                   <div className="flex items-start space-x-3">
                     <input
                       type="checkbox"
-                      checked={task.completed}
-                      onChange={() => toggleTask(task.createdAt.getTime())}
+                      checked={task.completed || false}
+                      onChange={() => {
+                        const updatedTask = { ...task, completed: !task.completed };
+                        axios.put(`http://localhost:5000/api/tasks/${task._id}`, updatedTask)
+                          .then(response => {
+                            setTasks(tasks.map(t => t._id === task._id ? response.data : t));
+                          })
+                          .catch(error => console.error('Error toggling task:', error));
+                      }}
                       className="mt-1 w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
                     />
                     <div>
@@ -255,7 +280,13 @@ const TaskList = ({ tasks, editTask }) => {
                       Set Reminder
                     </button>
                     <button
-                      onClick={() => deleteTask(task.createdAt.getTime())}
+                      onClick={() => {
+                        axios.delete(`http://localhost:5000/api/tasks/${task._id}`)
+                          .then(() => {
+                            setTasks(tasks.filter(t => t._id !== task._id));
+                          })
+                          .catch(error => console.error('Error deleting task:', error));
+                      }}
                       className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium transition"
                     >
                       Delete
