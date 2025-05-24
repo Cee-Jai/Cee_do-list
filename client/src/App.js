@@ -1,10 +1,9 @@
-   import { ThemeContext } from './ThemeContext';
+import { ThemeContext } from './ThemeContext';
 import { TaskContext, TaskProvider } from './TaskContext';
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import TaskList from './TaskList';
 import KanbanBoard from './KanbanBoard';
 import HabitTracker from './HabitTracker';
-import UserProfile from './UserProfile';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Confetti from 'react-confetti';
@@ -174,10 +173,12 @@ const App = () => {
   };
 
   const clearNotifications = () => setNotifications([]);
+
   const handleTaskInputChange = (e) => {
     const { name, value } = e.target;
     setNewTask((prev) => ({ ...prev, [name]: value }));
   };
+
   const handleAddTask = () => {
     if (!newTask.title.trim()) return;
     addTask({
@@ -225,6 +226,11 @@ const App = () => {
   const resetPomodoro = () => {
     setPomodoroActive(false);
     setPomodoroTime(25 * 60);
+  };
+
+  const handleAddPoints = () => {
+    addPoints(10);
+    toast.success('Added 10 points!');
   };
 
   const formatTime = (seconds) => {
@@ -445,7 +451,6 @@ const App = () => {
                 className="p-2 rounded-full neumorphic dark:bg-gray-700 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 transition flex items-center space-x-2"
               >
                 <span className="text-lg">👤</span>
-                <span className="text-sm text-gray-700 dark:text-gray-200">Guest</span>
               </button>
               {showProfile && (
                 <div className="absolute top-12 right-0 w-64 bg-white dark:bg-gray-800 p-4 rounded-xl neumorphic shadow-lg z-50">
@@ -484,6 +489,12 @@ const App = () => {
                     </button>
                     <div className="border-t border-gray-300 dark:border-gray-600 pt-2">
                       <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100 mb-2">Point Store</h4>
+                      <button
+                        onClick={handleAddPoints}
+                        className="w-full p-2 mb-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm"
+                      >
+                        Add 10 Points
+                      </button>
                       <button
                         onClick={() => unlockTheme('forest')}
                         className="w-full p-2 mb-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm"
@@ -554,7 +565,7 @@ const App = () => {
         </header>
         <main className="flex-1 p-6 lg:p-10">
           <div className="max-w-6xl mx-auto">
-            <div className="mb-8">
+            <div className="mb-8 overflow-auto max-h-[400px]">
               <KanbanBoard tasks={filteredTasks} editTask={editTask} />
             </div>
             <div className="mb-8">
@@ -626,7 +637,6 @@ const App = () => {
               </div>
             </div>
             <TaskList />
-            <UserProfile />
           </div>
         </main>
         <footer className="p-5 neumorphic text-center bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 text-sm shadow-inner">
@@ -645,7 +655,6 @@ const App = () => {
   );
 };
 
-// Wrap App with TaskProvider at the top level
 const AppWrapper = () => (
   <TaskProvider>
     <App />
