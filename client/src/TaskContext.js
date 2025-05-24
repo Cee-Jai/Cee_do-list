@@ -1,5 +1,7 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export const TaskContext = createContext();
 
@@ -11,138 +13,139 @@ export const TaskProvider = ({ children }) => {
   const [unlockedThemes, setUnlockedThemes] = useState(['default']);
   const [unlockedMusic, setUnlockedMusic] = useState(['lofi']);
 
-  // Fetch initial data from API
   useEffect(() => {
-    axios.get('http://localhost:5000/api/tasks')
-      .then(response => setTasks(response.data.map(task => ({
-        ...task,
-        createdAt: new Date(task.createdAt),
-        dueDate: task.dueDate ? new Date(task.dueDate) : null,
-        reminder: task.reminder ? new Date(task.reminder) : null,
-      }))))
-      .catch(error => console.error('Error fetching tasks:', error));
-
-    axios.get('http://localhost:5000/api/habits')
-      .then(response => setHabits(response.data.map(habit => ({
-        ...habit,
-        createdAt: new Date(habit.createdAt),
-        completionDates: habit.completionDates ? habit.completionDates.map(date => new Date(date)) : [],
-        reminder: habit.reminder ? new Date(habit.reminder) : null,
-      }))))
-      .catch(error => console.error('Error fetching habits:', error));
-
-    axios.get('http://localhost:5000/api/user')
-      .then(response => {
-        setPoints(response.data.points || 0);
-        setUnlockedThemes(response.data.unlockedThemes || ['default']);
-        setUnlockedMusic(response.data.unlockedMusic || ['lofi']);
-      })
-      .catch(error => console.error('Error fetching user data:', error));
+    const fetchData = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/tasks');
+        // Convert createdAt to Date object if it's a string
+        const formattedTasks = response.data.map(task => ({
+          ...task,
+          createdAt: task.createdAt ? new Date(task.createdAt) : new Date(),
+          dueDate: task.dueDate ? new Date(task.dueDate) : null,
+          reminder: task.reminder ? new Date(task.reminder) : null,
+        }));
+        setTasks(formattedTasks);
+      } catch (error) {
+        console.error('Error fetching tasks:', error);
+        toast.error('Failed to load tasks. Check backend connection.');
+      }
+    };
+    fetchData();
   }, []);
 
-  // Sync state with API on change
-  useEffect(() => {
-    axios.put('http://localhost:5000/api/user', { points, unlockedThemes, unlockedMusic })
-      .catch(error => console.error('Error syncing user data:', error));
-  }, [points, unlockedThemes, unlockedMusic]);
-
-  const addTask = (task) => {
-    const newTask = { ...task, completed: false, assignedTo: '', reminderNotified: false };
-    axios.post('http://localhost:5000/api/tasks', newTask)
-      .then(response => setTasks([...tasks, response.data]))
-      .catch(error => console.error('Error adding task:', error));
+  const addTask = async (task) => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/tasks', {
+        ...task,
+        completed: false,
+        assignedTo: '',
+        reminderNotified: false,
+        createdAt: new Date(),
+      });
+      // Ensure createdAt is a Date object in the response
+      const newTask = { ...response.data, createdAt: new Date(response.data.createdAt) };
+      setTasks([...tasks, newTask]);
+    } catch (error) {
+      console.error('Error adding task:', error);
+      toast.error('Failed to add task.');
+    }
   };
 
-  const toggleTask = (taskId) => {
-    const taskToUpdate = tasks.find(t => t._id === taskId);
+  const toggleTask = async (taskId) => {
+    const taskToUpdate = tasks.find(task => task._id === taskId);
+    if (!taskToUpdate) return;
     const updatedTask = { ...taskToUpdate, completed: !taskToUpdate.completed };
-    axios.put(`http://localhost:5000/api/tasks/${taskId}`, updatedTask)
-      .then(response => {
-        setTasks(tasks.map(t => t._id === taskId ? response.data : t));
-        if (response.data.completed) setPoints(points + 10);
-      })
-      .catch(error => console.error('Error toggling task:', error));
+    try {
+      const response = await axios.put(`http://localhost:5000/api/tasks/${taskId}`, updatedTask);
+      const updatedTaskWithDate = { ...response.data, createdAt: new Date(response.data.createdAt) };
+      setTasks(tasks.map(task => task._id === taskId ? updatedTaskWithDate : task));
+      if (updatedTask.completed) {
+        setPoints(prev => prev + 10);
+      }
+    } catch (error) {
+      console.error('Error toggling task:', error);
+      toast.error('Failed to toggle task.');
+    }
   };
 
-  const deleteTask = (taskId) => {
-    axios.delete(`http://localhost:5000/api/tasks/${taskId}`)
-      .then(() => setTasks(tasks.filter(t => t._id !== taskId)))
-      .catch(error => console.error('Error deleting task:', error));
+  const deleteTask = async (taskId) => {
+    try {
+      await axios.delete(`http://localhost:5000/api/tasks/${taskId}`);
+      setTasks(tasks.filter(task => task._id !== taskId));
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast.error('Failed to delete task.');
+    }
   };
 
-  const editTask = (taskId, updatedTask) => {
-    const taskToUpdate = tasks.find(t => t._id === taskId);
-    const fullUpdatedTask = { ...taskToUpdate, ...updatedTask };
-    axios.put(`http://localhost:5000/api/tasks/${taskId}`, fullUpdatedTask)
-      .then(response => setTasks(tasks.map(t => t._id === taskId ? response.data : t)))
-      .catch(error => console.error('Error editing task:', error));
+  const editTask = async (taskId, updatedTask) => {
+    try {
+      const response = await axios.put(`http://localhost:5000/api/tasks/${taskId}`, updatedTask);
+      const updatedTaskWithDate = { ...response.data, createdAt: new Date(response.data.createdAt) };
+      setTasks(tasks.map(task => task._id === taskId ? updatedTaskWithDate : task));
+    } catch (error) {
+      console.error('Error updating task:', error);
+      toast.error('Failed to update task.');
+    }
   };
 
-  const assignTask = (taskId, user) => {
-    const taskToUpdate = tasks.find(t => t._id === taskId);
+  const assignTask = async (taskId, user) => {
+    const taskToUpdate = tasks.find(task => task._id === taskId);
+    if (!taskToUpdate) return;
     const updatedTask = { ...taskToUpdate, assignedTo: user };
-    axios.put(`http://localhost:5000/api/tasks/${taskId}`, updatedTask)
-      .then(response => setTasks(tasks.map(t => t._id === taskId ? response.data : t)))
-      .catch(error => console.error('Error assigning task:', error));
+    try {
+      const response = await axios.put(`http://localhost:5000/api/tasks/${taskId}`, updatedTask);
+      const updatedTaskWithDate = { ...response.data, createdAt: new Date(response.data.createdAt) };
+      setTasks(tasks.map(task => task._id === taskId ? updatedTaskWithDate : task));
+    } catch (error) {
+      console.error('Error assigning task:', error);
+      toast.error('Failed to assign task.');
+    }
   };
 
   const addPoints = (amount) => {
-    setPoints(prevPoints => {
-      const newPoints = prevPoints + amount;
-      axios.put('http://localhost:5000/api/user', { points: newPoints })
-        .catch(error => console.error('Error adding points:', error));
-      return newPoints;
-    });
+    setPoints(prev => prev + amount);
   };
 
   const addHabit = (habit) => {
-    const newHabit = { ...habit, completionDates: [], category: 'Productivity', reminder: null };
-    axios.post('http://localhost:5000/api/habits', newHabit)
-      .then(response => setHabits([...habits, response.data]))
-      .catch(error => console.error('Error adding habit:', error));
+    setHabits([...habits, { ...habit, completionDates: [], category: 'Productivity', reminder: null, createdAt: new Date() }]);
   };
 
   const toggleHabit = (habitId, date) => {
-    const habitToUpdate = habits.find(h => h._id === habitId);
-    const dateStr = date.toDateString();
-    const completionDates = habitToUpdate.completionDates || [];
-    const updatedHabit = {
-      ...habitToUpdate,
-      completionDates: completionDates.some(d => d.toDateString() === dateStr)
-        ? completionDates.filter(d => d.toDateString() !== dateStr)
-        : [...completionDates, date],
-    };
-    axios.put(`http://localhost:5000/api/habits/${habitId}`, updatedHabit)
-      .then(response => {
-        setHabits(habits.map(h => h._id === habitId ? response.data : h));
-      })
-      .catch(error => console.error('Error toggling habit:', error));
+    setHabits(habits.map((habit) => {
+      if (habit.createdAt.getTime() === habitId) {
+        const dateStr = date.toDateString();
+        const completionDates = habit.completionDates || [];
+        const dateExists = completionDates.some(d => d.toDateString() === dateStr);
+        return {
+          ...habit,
+          completionDates: dateExists
+            ? completionDates.filter(d => d.toDateString() !== dateStr)
+            : [...completionDates, date],
+        };
+      }
+      return habit;
+    }));
   };
 
   const deleteHabit = (habitId) => {
-    axios.delete(`http://localhost:5000/api/habits/${habitId}`)
-      .then(() => setHabits(habits.filter(h => h._id !== habitId)))
-      .catch(error => console.error('Error deleting habit:', error));
+    setHabits(habits.filter((habit) => habit.createdAt.getTime() !== habitId));
   };
 
   const editHabit = (habitId, updatedHabit) => {
-    const habitToUpdate = habits.find(h => h._id === habitId);
-    const fullUpdatedHabit = { ...habitToUpdate, ...updatedHabit };
-    axios.put(`http://localhost:5000/api/habits/${habitId}`, fullUpdatedHabit)
-      .then(response => setHabits(habits.map(h => h._id === habitId ? response.data : h)))
-      .catch(error => console.error('Error editing habit:', error));
+    setHabits(habits.map((habit) => (habit.createdAt.getTime() === habitId ? { ...habit, ...updatedHabit } : habit)));
   };
 
   const unlockTheme = (theme) => {
     if (points >= 50 && !unlockedThemes.includes(theme)) {
-      setPoints(points - 50);
+      setPoints(prev => prev - 50);
       setUnlockedThemes([...unlockedThemes, theme]);
     }
   };
 
   const unlockMusic = (track) => {
     if (points >= 30 && !unlockedMusic.includes(track)) {
-      setPoints(points - 30);
+      setPoints(prev => prev - 30);
       setUnlockedMusic([...unlockedMusic, track]);
     }
   };

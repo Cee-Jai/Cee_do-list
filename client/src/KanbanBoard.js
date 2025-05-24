@@ -12,11 +12,11 @@ const KanbanBoard = ({ tasks, editTask }) => {
     const newTasks = Array.from(tasks);
     const [reorderedItem] = newTasks.splice(result.source.index, 1);
     newTasks.splice(result.destination.index, 0, reorderedItem);
-    const updatedTasks = newTasks.map((task, index) => ({
+    const updatedTasks = newTasks.map((task) => ({
       ...task,
       status: selectedStatus, // Update status based on the current view
     }));
-    updatedTasks.forEach((task, i) => editTask(task.createdAt.getTime(), { ...task, status: task.status }));
+    updatedTasks.forEach((task) => editTask(task._id, { ...task, status: task.status }));
   };
 
   const getTasksByStatus = (status) => tasks.filter((task) => task.status === status);
@@ -55,7 +55,7 @@ const KanbanBoard = ({ tasks, editTask }) => {
                 <p className="text-gray-500 dark:text-gray-400">No tasks in this status.</p>
               ) : (
                 getTasksByStatus(selectedStatus).map((task, index) => (
-                  <Draggable key={task.createdAt.getTime()} draggableId={task.createdAt.getTime().toString()} index={index}>
+                  <Draggable key={task._id.toString()} draggableId={task._id.toString()} index={index}>
                     {(provided) => (
                       <Tilt
                         options={{ max: 25, scale: 1.05, speed: 300 }}
@@ -70,7 +70,7 @@ const KanbanBoard = ({ tasks, editTask }) => {
                             </span>
                             <select
                               value={task.assignedTo || ''}
-                              onChange={(e) => assignTask(task.createdAt.getTime(), e.target.value)}
+                              onChange={(e) => assignTask(task._id, e.target.value)}
                               className="ml-2 p-1 border rounded text-sm"
                             >
                               <option value="">Unassigned</option>
