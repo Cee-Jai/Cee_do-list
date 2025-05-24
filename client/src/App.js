@@ -3,18 +3,18 @@ import { TaskContext, TaskProvider } from './TaskContext';
 import React, { useContext, useState, useEffect, useRef } from 'react';
 import TaskList from './TaskList';
 import KanbanBoard from './KanbanBoard';
-import HabitTracker from './HabitTracker';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Confetti from 'react-confetti';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { StaticDatePicker } from '@mui/x-date-pickers/StaticDatePicker';
+import Chart from 'chart.js/auto';
 import './App.css';
 
 const App = () => {
   const { theme, toggleTheme } = useContext(ThemeContext);
-  const { tasks, points, addTask, editTask, addPoints, habits, unlockedThemes, unlockedMusic, unlockTheme, unlockMusic } = useContext(TaskContext);
+  const { tasks, points, addTask, editTask, addPoints, habits, unlockedThemes, unlockedMusic, unlockTheme, unlockMusic, addHabit, toggleHabit, deleteHabit, editHabit } = useContext(TaskContext);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
@@ -35,6 +35,7 @@ const App = () => {
     reminderNotified: false,
     status: 'To Do',
   });
+  const [newHabit, setNewHabit] = useState({ name: '', category: 'Productivity', recurrence: 'Daily' });
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [voiceActive, setVoiceActive] = useState(false);
@@ -43,8 +44,10 @@ const App = () => {
   const [pomodoroActive, setPomodoroActive] = useState(false);
   const [pomodoroSessions, setPomodoroSessions] = useState(0);
   const [customBackground, setCustomBackground] = useState(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const audioRef = useRef(null);
   const recognitionRef = useRef(null);
+  const chartRef = useRef(null);
 
   const completedTasks = tasks ? tasks.filter((task) => task.completed).length : 0;
   const totalTasks = tasks ? tasks.length : 0;
@@ -141,6 +144,39 @@ const App = () => {
     });
   }, [tasks, editTask]);
 
+  useEffect(() => {
+    if (chartRef.current) {
+      const ctx = chartRef.current.getContext('2d');
+      if (window.myChart) window.myChart.destroy();
+      const completionData = tasks
+        .filter((task) => task.completed)
+        .map((task) => new Date(task.dueDate).toLocaleDateString());
+      const dates = [...new Set(completionData)].sort();
+      const completionCounts = dates.map((date) => completionData.filter((d) => d === date).length);
+      window.myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [{
+            label: 'Tasks Completed',
+            data: completionCounts,
+            borderColor: 'rgba(75, 192, 192, 1)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            fill: true,
+            tension: 0.1
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'Completed Tasks' } },
+            x: { title: { display: true, text: 'Date' } }
+          }
+        }
+      });
+    }
+  }, [tasks, showAnalytics]);
+
   const getStreak = () => {
     const completedDates = tasks
       .filter((task) => task.completed)
@@ -199,6 +235,22 @@ const App = () => {
       status: 'To Do',
     });
     setShowTaskForm(false);
+  };
+
+  const handleAddHabit = (e) => {
+    e.preventDefault();
+    if (newHabit.name.trim()) {
+      addHabit({
+        name: newHabit.name,
+        category: newHabit.category,
+        recurrence: newHabit.recurrence,
+        createdAt: new Date()
+      });
+      setNewHabit({ name: '', category: 'Productivity', recurrence: 'Daily' });
+      toast.success(`Added habit: ${newHabit.name}`);
+    } else {
+      toast.error('Habit name cannot be empty!');
+    }
   };
 
   const toggleVoice = () => {
@@ -561,6 +613,12 @@ const App = () => {
             >
               {showCalendar ? 'Hide Calendar' : 'Show Calendar'}
             </button>
+            <button
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-all duration-200 text-sm ml-2"
+            >
+              📊 Analytics
+            </button>
           </div>
         </header>
         <main className="flex-1 p-6 lg:p-10">
@@ -568,8 +626,80 @@ const App = () => {
             <div className="mb-8 overflow-auto max-h-[400px]">
               <KanbanBoard tasks={filteredTasks} editTask={editTask} />
             </div>
-            <div className="mb-8">
-              <HabitTracker />
+            <div className="mb-8 p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg">
+              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Habit Tracker</h2>
+              <div className="mb-4">
+                <form onSubmit={handleAddHabit} className="flex space-x-2">
+                  <input
+                    type="text"
+                    placeholder="New Habit"
+                    value={newHabit.name}
+                    onChange={(e) => setNewHabit({ ...newHabit, name: e.target.value })}
+                    className="flex-1 p-2 rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                  />
+                  <select
+                    value={newHabit.category}
+                    onChange={(e) => setNewHabit({ ...newHabit, category: e.target.value })}
+                    className="p-2 rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                  >
+                    <option value="Productivity">Productivity</option>
+                    <option value="Health">Health</option>
+                    <option value="Personal">Personal</option>
+                  </select>
+                  <select
+                    value={newHabit.recurrence}
+                    onChange={(e) => setNewHabit({ ...newHabit, recurrence: e.target.value })}
+                    className="p-2 rounded-lg neumorphic focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 text-sm"
+                  >
+                    <option value="Daily">Daily</option>
+                    <option value="Weekly">Weekly</option>
+                    <option value="Monthly">Monthly</option>
+                  </select>
+                  <button
+                    type="submit"
+                    className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 text-sm"
+                  >
+                    Add Habit
+                  </button>
+                </form>
+              </div>
+              <div className="space-y-2">
+                {habits.map((habit) => (
+                  <div
+                    key={habit.createdAt.getTime()}
+                    className="flex items-center justify-between p-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                  >
+                    <div>
+                      <input
+                        type="checkbox"
+                        checked={habit.completionDates && habit.completionDates.some(date => date.toDateString() === new Date().toDateString())}
+                        onChange={(e) => toggleHabit(habit.createdAt.getTime(), new Date())}
+                        className="mr-2"
+                      />
+                      <span className={habit.completionDates && habit.completionDates.some(date => date.toDateString() === new Date().toDateString()) ? 'line-through text-green-400' : 'text-gray-800 dark:text-gray-100'}>
+                        {habit.name}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      Category: {habit.category} | Recurs: {habit.recurrence} | Created: {new Date(habit.createdAt).toLocaleDateString()}
+                    </div>
+                    <div className="space-x-2">
+                      <button
+                        onClick={() => editHabit(habit.createdAt.getTime(), { name: prompt('Edit habit name:', habit.name) || habit.name })}
+                        className="text-blue-500 dark:text-blue-400 hover:underline"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteHabit(habit.createdAt.getTime())}
+                        className="text-red-500 dark:text-red-400 hover:underline"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
             {showCalendar && (
               <div className="mb-8">
@@ -615,27 +745,36 @@ const App = () => {
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">You’re on a roll!</p>
               </div>
             </div>
-            <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg mb-8">
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Analytics Dashboard</h2>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Task Completion Rate</h3>
-                  <p className="text-2xl text-gray-900 dark:text-gray-100">{progress.toFixed(1)}%</p>
+            {showAnalytics && (
+              <div className="p-5 neumorphic rounded-xl bg-white dark:bg-gray-800 shadow-lg mb-8">
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Analytics Dashboard</h2>
+                <canvas ref={chartRef} width="400" height="200"></canvas>
+                <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Task Completion Rate</h3>
+                    <p className="text-2xl text-gray-900 dark:text-gray-100">{progress.toFixed(1)}%</p>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Habit Consistency</h3>
+                    <p className="text-2xl text-gray-900 dark:text-gray-100">{habits.filter(h => h.completionDates && h.completionDates.length > 0).length}/{habits.length}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Pomodoro Sessions</h3>
+                    <p className="text-2xl text-gray-900 dark:text-gray-100">{pomodoroSessions}</p>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Current Streak</h3>
+                    <p className="text-2xl text-gray-900 dark:text-gray-100">{getStreak()} days</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Habit Consistency</h3>
-                  <p className="text-2xl text-gray-900 dark:text-gray-100">{habits.filter(h => h.completionDates && h.completionDates.length > 0).length}/{habits.length}</p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Pomodoro Sessions</h3>
-                  <p className="text-2xl text-gray-900 dark:text-gray-100">{pomodoroSessions}</p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Current Streak</h3>
-                  <p className="text-2xl text-gray-900 dark:text-gray-100">{getStreak()} days</p>
-                </div>
+                <button
+                  onClick={() => setShowAnalytics(false)}
+                  className="mt-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all duration-200 text-sm"
+                >
+                  Close
+                </button>
               </div>
-            </div>
+            )}
             <TaskList />
           </div>
         </main>
