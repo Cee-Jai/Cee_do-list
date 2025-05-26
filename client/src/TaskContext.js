@@ -1,152 +1,104 @@
-import React, { createContext, useState, useEffect } from 'react';
+;import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 
 export const TaskContext = createContext();
 
 export const TaskProvider = ({ children }) => {
   const [tasks, setTasks] = useState([]);
-  const [habits, setHabits] = useState([]);
   const [points, setPoints] = useState(0);
-  const [users] = useState(['Alice', 'Bob', 'Charlie']);
+  const [habits, setHabits] = useState([]);
   const [unlockedThemes, setUnlockedThemes] = useState(['default']);
   const [unlockedMusic, setUnlockedMusic] = useState(['lofi']);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchTasks = async () => {
       try {
         const response = await axios.get('http://localhost:5000/api/tasks');
-        // Convert createdAt to Date object if it's a string
-        const formattedTasks = response.data.map(task => ({
-          ...task,
-          createdAt: task.createdAt ? new Date(task.createdAt) : new Date(),
-          dueDate: task.dueDate ? new Date(task.dueDate) : null,
-          reminder: task.reminder ? new Date(task.reminder) : null,
-        }));
-        setTasks(formattedTasks);
+        console.log('Fetched tasks:', response.data);
+        setTasks(response.data);
       } catch (error) {
         console.error('Error fetching tasks:', error);
-        toast.error('Failed to load tasks. Check backend connection.');
       }
     };
-    fetchData();
+
+    const fetchHabits = async () => {
+      try {
+        const response = await axios.get('http://localhost:5000/api/habits');
+        console.log('Fetched habits:', response.data);
+        setHabits(response.data);
+      } catch (error) {
+        console.error('Error fetching habits:', error);
+      }
+    };
+
+    fetchTasks();
+    fetchHabits();
   }, []);
 
   const addTask = async (task) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/tasks', {
-        ...task,
-        completed: false,
-        assignedTo: '',
-        reminderNotified: false,
-        createdAt: new Date(),
-      });
-      // Ensure createdAt is a Date object in the response
-      const newTask = { ...response.data, createdAt: new Date(response.data.createdAt) };
-      setTasks([...tasks, newTask]);
+      const response = await axios.post('http://localhost:5000/api/tasks', task);
+      setTasks([...tasks, response.data]);
     } catch (error) {
       console.error('Error adding task:', error);
-      toast.error('Failed to add task.');
     }
   };
 
-  const toggleTask = async (taskId) => {
-    const taskToUpdate = tasks.find(task => task._id === taskId);
-    if (!taskToUpdate) return;
-    const updatedTask = { ...taskToUpdate, completed: !taskToUpdate.completed };
+  const editTask = async (id, updatedTask) => {
     try {
-      const response = await axios.put(`http://localhost:5000/api/tasks/${taskId}`, updatedTask);
-      const updatedTaskWithDate = { ...response.data, createdAt: new Date(response.data.createdAt) };
-      setTasks(tasks.map(task => task._id === taskId ? updatedTaskWithDate : task));
-      if (updatedTask.completed) {
-        setPoints(prev => prev + 10);
-      }
+      const response = await axios.put(`http://localhost:5000/api/tasks/${id}`, updatedTask);
+      setTasks(tasks.map((task) => (task._id === id ? response.data : task)));
     } catch (error) {
-      console.error('Error toggling task:', error);
-      toast.error('Failed to toggle task.');
+      console.error('Error editing task:', error);
     }
   };
 
-  const deleteTask = async (taskId) => {
+  const addHabit = async (habit) => {
+    console.log('Adding habit:', habit);
     try {
-      await axios.delete(`http://localhost:5000/api/tasks/${taskId}`);
-      setTasks(tasks.filter(task => task._id !== taskId));
+      const response = await axios.post('http://localhost:5000/api/habits', {
+        name: habit.name,
+        completed: false,
+      });
+      console.log('Backend response:', response.data);
+      setHabits((prevHabits) => {
+        const updatedHabits = [...prevHabits, response.data];
+        console.log('Updated habits:', updatedHabits);
+        return updatedHabits;
+      });
+      console.log('Habit added successfully, new state:', habits); // Add this line
     } catch (error) {
-      console.error('Error deleting task:', error);
-      toast.error('Failed to delete task.');
+      console.error('Error adding habit:', error.response ? error.response.data : error.message);
+      alert('Failed to add habit. Check console for details.');
     }
   };
 
-  const editTask = async (taskId, updatedTask) => {
+  const toggleHabit = async (id) => {
     try {
-      const response = await axios.put(`http://localhost:5000/api/tasks/${taskId}`, updatedTask);
-      const updatedTaskWithDate = { ...response.data, createdAt: new Date(response.data.createdAt) };
-      setTasks(tasks.map(task => task._id === taskId ? updatedTaskWithDate : task));
+      const habit = habits.find((h) => h._id === id);
+      const updatedHabit = { ...habit, completed: !habit.completed };
+      const response = await axios.put(`http://localhost:5000/api/habits/${id}`, updatedHabit);
+      setHabits(habits.map((h) => (h._id === id ? response.data : h)));
     } catch (error) {
-      console.error('Error updating task:', error);
-      toast.error('Failed to update task.');
-    }
-  };
-
-  const assignTask = async (taskId, user) => {
-    const taskToUpdate = tasks.find(task => task._id === taskId);
-    if (!taskToUpdate) return;
-    const updatedTask = { ...taskToUpdate, assignedTo: user };
-    try {
-      const response = await axios.put(`http://localhost:5000/api/tasks/${taskId}`, updatedTask);
-      const updatedTaskWithDate = { ...response.data, createdAt: new Date(response.data.createdAt) };
-      setTasks(tasks.map(task => task._id === taskId ? updatedTaskWithDate : task));
-    } catch (error) {
-      console.error('Error assigning task:', error);
-      toast.error('Failed to assign task.');
+      console.error('Error toggling habit:', error);
     }
   };
 
   const addPoints = (amount) => {
-    setPoints(prev => prev + amount);
-  };
-
-  const addHabit = (habit) => {
-    setHabits([...habits, { ...habit, completionDates: [], category: 'Productivity', reminder: null, createdAt: new Date() }]);
-  };
-
-  const toggleHabit = (habitId, date) => {
-    setHabits(habits.map((habit) => {
-      if (habit.createdAt.getTime() === habitId) {
-        const dateStr = date.toDateString();
-        const completionDates = habit.completionDates || [];
-        const dateExists = completionDates.some(d => d.toDateString() === dateStr);
-        return {
-          ...habit,
-          completionDates: dateExists
-            ? completionDates.filter(d => d.toDateString() !== dateStr)
-            : [...completionDates, date],
-        };
-      }
-      return habit;
-    }));
-  };
-
-  const deleteHabit = (habitId) => {
-    setHabits(habits.filter((habit) => habit.createdAt.getTime() !== habitId));
-  };
-
-  const editHabit = (habitId, updatedHabit) => {
-    setHabits(habits.map((habit) => (habit.createdAt.getTime() === habitId ? { ...habit, ...updatedHabit } : habit)));
+    setPoints(points + amount);
   };
 
   const unlockTheme = (theme) => {
     if (points >= 50 && !unlockedThemes.includes(theme)) {
-      setPoints(prev => prev - 50);
       setUnlockedThemes([...unlockedThemes, theme]);
+      setPoints(points - 50);
     }
   };
 
-  const unlockMusic = (track) => {
-    if (points >= 30 && !unlockedMusic.includes(track)) {
-      setPoints(prev => prev - 30);
-      setUnlockedMusic([...unlockedMusic, track]);
+  const unlockMusic = (music) => {
+    if (points >= 30 && !unlockedMusic.includes(music)) {
+      setUnlockedMusic([...unlockedMusic, music]);
+      setPoints(points - 30);
     }
   };
 
@@ -154,21 +106,16 @@ export const TaskProvider = ({ children }) => {
     <TaskContext.Provider
       value={{
         tasks,
-        habits,
+        setTasks,
         points,
-        users,
-        unlockedThemes,
-        unlockedMusic,
         addTask,
-        toggleTask,
-        deleteTask,
         editTask,
-        assignTask,
         addPoints,
+        habits,
         addHabit,
         toggleHabit,
-        deleteHabit,
-        editHabit,
+        unlockedThemes,
+        unlockedMusic,
         unlockTheme,
         unlockMusic,
       }}
